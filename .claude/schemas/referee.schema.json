@@ -1,0 +1,20 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Referee",
+  "description": "One record per unique referee. Built from parsing foul events and cross-referencing boxscore officials data.",
+  "type": "object",
+  "required": [
+    "referee_name"
+  ],
+  "properties": {
+    "referee_name": {
+      "type": "string",
+      "description": "Full name of the referee. Primary identifier. Parsed from foul event descriptions."
+    },
+    "referee_id": {
+      "type": ["integer", "null"],
+      "nullable": true,
+      "description": "Official referee ID from the NBA API (boxscoresummaryv2 officials data). Nullable — used to cross-reference and validate parsed names."
+    }
+  }
+}

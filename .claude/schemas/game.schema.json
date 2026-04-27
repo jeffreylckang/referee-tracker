@@ -1,0 +1,42 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Game",
+  "description": "One record per game. Provides context for all foul events.",
+  "type": "object",
+  "required": [
+    "game_id",
+    "game_date",
+    "home_team_tricode",
+    "away_team_tricode",
+    "season",
+    "playoff_round"
+  ],
+  "properties": {
+    "game_id": {
+      "type": "string",
+      "description": "NBA game identifier (e.g. '0042500164'). Primary identifier."
+    },
+    "game_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Date the game was played (YYYY-MM-DD)."
+    },
+    "home_team_tricode": {
+      "type": "string",
+      "description": "Three-letter code for the home team (e.g. 'MIN')."
+    },
+    "away_team_tricode": {
+      "type": "string",
+      "description": "Three-letter code for the away team (e.g. 'DEN')."
+    },
+    "season": {
+      "type": "string",
+      "description": "NBA season identifier (e.g. '2024-25')."
+    },
+    "playoff_round": {
+      "type": ["string", "null"],
+      "nullable": true,
+      "description": "Playoff round derived from game_id prefix. e.g. 'first_round', 'conference_semifinals'. Null for regular season games."
+    }
+  }
+}

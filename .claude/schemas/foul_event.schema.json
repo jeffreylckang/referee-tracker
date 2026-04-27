@@ -1,0 +1,96 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "FoulEvent",
+  "description": "One record per foul call. Central entity of the referee tracking system. All fields come directly from NBA CDN endpoints — no text parsing required.",
+  "type": "object",
+  "required": [
+    "game_id",
+    "action_number",
+    "period",
+    "clock",
+    "foul_type",
+    "foul_subtype",
+    "fouler_player_id",
+    "fouler_player_name",
+    "fouler_team_id",
+    "fouler_team_tricode",
+    "official_id",
+    "official_name",
+    "description"
+  ],
+  "properties": {
+    "game_id": {
+      "type": "string",
+      "description": "NBA game identifier (e.g. '0042500164'). Prefix '004' = playoffs, '25' = 2024-25 season."
+    },
+    "action_number": {
+      "type": "integer",
+      "description": "Unique event identifier within a game. API field: actionNumber."
+    },
+    "period": {
+      "type": "integer",
+      "description": "Game period. 1-4 for regulation, 5+ for overtime."
+    },
+    "clock": {
+      "type": "string",
+      "description": "Time remaining in the period (e.g. 'PT09M56.00S'). API field: clock."
+    },
+    "foul_type": {
+      "type": "string",
+      "description": "Action type from the API. Always 'foul' for this schema. API field: actionType.",
+      "const": "foul"
+    },
+    "foul_subtype": {
+      "type": "string",
+      "description": "Foul subtype from the API. API field: subType. Known values: 'personal', 'technical'."
+    },
+    "fouler_player_id": {
+      "type": "integer",
+      "description": "Player ID of the player who committed the foul. Tracks fouls committed. API field: personId."
+    },
+    "fouler_player_name": {
+      "type": "string",
+      "description": "Abbreviated name of the player who committed the foul (e.g. 'A. Dosunmu'). API field: playerNameI."
+    },
+    "fouler_team_id": {
+      "type": "integer",
+      "description": "Team ID of the player who committed the foul. API field: teamId."
+    },
+    "fouler_team_tricode": {
+      "type": "string",
+      "description": "Three-letter team code of the fouler (e.g. 'MIN'). API field: teamTricode."
+    },
+    "fouled_player_id": {
+      "type": ["integer", "null"],
+      "nullable": true,
+      "description": "Player ID of the player who was fouled. Tracks fouls drawn. API field: foulDrawnPersonId. Null for technical fouls (no specific player fouled)."
+    },
+    "fouled_player_name": {
+      "type": ["string", "null"],
+      "nullable": true,
+      "description": "Last name of the player who was fouled (e.g. 'Murray'). API field: foulDrawnPlayerName. Null for technical fouls."
+    },
+    "official_id": {
+      "type": "integer",
+      "description": "ID of the referee who called the foul. API field: officialId. Resolved to official_name via the game boxscore officials list."
+    },
+    "official_name": {
+      "type": "string",
+      "description": "Full name of the referee who called the foul (e.g. 'Pat Fraher'). Resolved by matching official_id against boxscore officials for the game."
+    },
+    "foul_personal_total": {
+      "type": ["integer", "null"],
+      "nullable": true,
+      "description": "Running personal foul total for the fouling player at the time of this call. API field: foulPersonalTotal."
+    },
+    "foul_detail": {
+      "type": "string",
+      "description": "Granular foul category parsed from description. Values: 'shooting', 'loose_ball', 'flagrant_1', 'flagrant_2', 'offensive', 'personal', 'technical'. Use foul_detail != 'technical' to get total non-technical fouls.",
+      "enum": ["shooting", "loose_ball", "flagrant_1", "flagrant_2", "offensive", "personal", "technical"]
+    },
+    "description": {
+      "type": "string",
+      "description": "Play description from the API (e.g. 'A. Dosunmu personal FOUL (1 PF)'). Kept for reference. API field: description."
+    }
+  }
+}

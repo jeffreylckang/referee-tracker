@@ -1,0 +1,9 @@
+.env
+__pycache__/
+*.pyc
+*.pyo
+data/referee_tracker.db
+data/*.log
+data/last_*.json
+data/pending_game_ids.json
+data/error_log.jsonl

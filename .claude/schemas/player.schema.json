@@ -1,0 +1,30 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Player",
+  "description": "One record per unique player. Used to resolve fouled_player_id from fouled_player_name and as a reference for the visualization.",
+  "type": "object",
+  "required": [
+    "player_id",
+    "player_name",
+    "team_id",
+    "team_tricode"
+  ],
+  "properties": {
+    "player_id": {
+      "type": "integer",
+      "description": "NBA player ID from the API. Primary identifier."
+    },
+    "player_name": {
+      "type": "string",
+      "description": "Full name of the player."
+    },
+    "team_id": {
+      "type": "integer",
+      "description": "NBA team ID the player belongs to."
+    },
+    "team_tricode": {
+      "type": "string",
+      "description": "Three-letter team code (e.g. 'DEN', 'MIN')."
+    }
+  }
+}
