@@ -405,10 +405,18 @@ def get_referee(
               "game_type": game_type, "foul_detail": foul_detail}
 
     cur.execute(f"""
+        WITH latest_team AS (
+            SELECT DISTINCT ON (fouler_player_id)
+                fouler_player_id,
+                fouler_team_tricode
+            FROM foul_events
+            WHERE fouler_team_tricode IS NOT NULL
+            ORDER BY fouler_player_id, game_id DESC
+        )
         SELECT
             f.fouler_player_id,
             f.fouler_player_name,
-            f.fouler_team_tricode,
+            lt.fouler_team_tricode,
             COUNT(*)                                                        AS total_fouls,
             SUM(CASE WHEN f.foul_detail = 'shooting'   THEN 1 ELSE 0 END) AS shooting,
             SUM(CASE WHEN f.foul_detail = 'personal'   THEN 1 ELSE 0 END) AS personal,
@@ -418,12 +426,13 @@ def get_referee(
             SUM(CASE WHEN f.foul_detail = 'flagrant_2' THEN 1 ELSE 0 END) AS flagrant_2,
             SUM(CASE WHEN f.foul_detail = 'technical'  THEN 1 ELSE 0 END) AS technical
         FROM foul_events f
+        LEFT JOIN latest_team lt ON lt.fouler_player_id = f.fouler_player_id
         JOIN games g ON f.game_id = g.game_id
         WHERE f.official_id = %(official_id)s
           AND (%(season)s      IS NULL OR g.season      = %(season)s)
           AND (%(foul_detail)s IS NULL OR f.foul_detail = %(foul_detail)s)
           {GAME_TYPE_CLAUSE}
-        GROUP BY f.fouler_player_id, f.fouler_player_name, f.fouler_team_tricode
+        GROUP BY f.fouler_player_id, f.fouler_player_name, lt.fouler_team_tricode
         ORDER BY total_fouls DESC
         LIMIT 25
     """, params)
