@@ -1,5 +1,10 @@
 const BASE = import.meta.env.VITE_API_URL
 
+export async function fetchStats() {
+  const r = await fetch(`${BASE}/api/stats`)
+  return r.json()
+}
+
 export async function fetchFilters() {
   const r = await fetch(`${BASE}/api/filters`)
   return r.json()

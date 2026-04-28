@@ -64,6 +64,50 @@ def get_filters():
 
 
 # ---------------------------------------------------------------------------
+# /api/stats
+# ---------------------------------------------------------------------------
+
+@app.get("/api/stats")
+def get_stats():
+    conn = get_conn()
+    cur  = conn.cursor()
+
+    cur.execute("SELECT COUNT(*) AS count FROM games")
+    games = cur.fetchone()["count"]
+
+    cur.execute("SELECT COUNT(*) AS count FROM foul_events WHERE official_id IS NOT NULL")
+    fouls = cur.fetchone()["count"]
+
+    cur.execute("SELECT COUNT(*) AS count FROM referees")
+    referees = cur.fetchone()["count"]
+
+    cur.execute("SELECT COUNT(*) AS count FROM players WHERE team_tricode IS NOT NULL")
+    players = cur.fetchone()["count"]
+
+    cur.execute("SELECT MIN(season) AS min_season, MAX(season) AS max_season FROM games WHERE season IS NOT NULL")
+    season_range = cur.fetchone()
+
+    cur.execute("""
+        SELECT season, COUNT(*) AS games,
+               SUM(CASE WHEN playoff_round IS NOT NULL THEN 1 ELSE 0 END) AS playoff_games
+        FROM games WHERE season IS NOT NULL
+        GROUP BY season ORDER BY season
+    """)
+    by_season = [dict(r) for r in cur.fetchall()]
+
+    cur.close()
+    conn.close()
+    return {
+        "games":        games,
+        "foul_events":  fouls,
+        "referees":     referees,
+        "players":      players,
+        "season_range": {"min": season_range["min_season"], "max": season_range["max_season"]},
+        "by_season":    by_season,
+    }
+
+
+# ---------------------------------------------------------------------------
 # /api/graph
 # ---------------------------------------------------------------------------
 

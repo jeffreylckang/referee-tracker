@@ -2,6 +2,19 @@ import { useEffect, useState } from 'react'
 import { fetchReferees, fetchPlayers, fetchTeams, fetchFilters, fetchReferee, fetchPlayer, fetchTeam } from '../api'
 import styles from './DashboardView.module.css'
 
+const TEAM_NAMES = {
+  ATL: 'Atlanta Hawks',         BOS: 'Boston Celtics',        BKN: 'Brooklyn Nets',
+  CHA: 'Charlotte Hornets',     CHI: 'Chicago Bulls',         CLE: 'Cleveland Cavaliers',
+  DAL: 'Dallas Mavericks',      DEN: 'Denver Nuggets',        DET: 'Detroit Pistons',
+  GSW: 'Golden State Warriors', HOU: 'Houston Rockets',       IND: 'Indiana Pacers',
+  LAC: 'LA Clippers',           LAL: 'Los Angeles Lakers',    MEM: 'Memphis Grizzlies',
+  MIA: 'Miami Heat',            MIL: 'Milwaukee Bucks',       MIN: 'Minnesota Timberwolves',
+  NOP: 'New Orleans Pelicans',  NYK: 'New York Knicks',       OKC: 'Oklahoma City Thunder',
+  ORL: 'Orlando Magic',         PHI: 'Philadelphia 76ers',    PHX: 'Phoenix Suns',
+  POR: 'Portland Trail Blazers',SAC: 'Sacramento Kings',      SAS: 'San Antonio Spurs',
+  TOR: 'Toronto Raptors',       UTA: 'Utah Jazz',             WAS: 'Washington Wizards',
+}
+
 const FOUL_LABELS = {
   shooting:   'Shooting',
   personal:   'Personal',
@@ -11,6 +24,8 @@ const FOUL_LABELS = {
   flagrant_2: 'Flagrant 2',
   technical:  'Technical',
 }
+
+const PERIOD_LABEL = p => p <= 4 ? `Q${p}` : `OT${p - 4 > 1 ? p - 4 : ''}`
 
 export default function DashboardView() {
   const [tab,        setTab]        = useState('referees')
@@ -25,12 +40,10 @@ export default function DashboardView() {
   const [detail,     setDetail]     = useState(null)
   const [loading,    setLoading]    = useState(true)
 
-  // Load filter options once
   useEffect(() => {
     fetchFilters().then(f => setFilters(f))
   }, [])
 
-  // Reload list whenever list-level filters change
   useEffect(() => {
     setLoading(true)
     setDetail(null)
@@ -44,15 +57,6 @@ export default function DashboardView() {
   }, [season, gameType, foulDetail])
 
   const query = search.toLowerCase()
-
-  const filteredReferees = referees.filter(r =>
-    r.official_name.toLowerCase().includes(query)
-  )
-
-  const filteredPlayers = players.filter(p =>
-    p.player_name.toLowerCase().includes(query)
-  )
-
   const filterOpts = { season: season || undefined, game_type: gameType || undefined, foul_detail: foulDetail || undefined }
 
   async function selectReferee(r) {
@@ -69,6 +73,13 @@ export default function DashboardView() {
     const data = await fetchTeam(t.team_tricode, filterOpts)
     setDetail({ type: 'team', data })
   }
+
+  const filteredReferees = referees.filter(r => r.official_name.toLowerCase().includes(query))
+  const filteredPlayers  = players.filter(p => p.player_name.toLowerCase().includes(query))
+  const filteredTeams    = teams.filter(t =>
+    t.team_tricode.toLowerCase().includes(query) ||
+    (TEAM_NAMES[t.team_tricode] || '').toLowerCase().includes(query)
+  )
 
   return (
     <div className={styles.wrap}>
@@ -101,55 +112,51 @@ export default function DashboardView() {
           </select>
         </div>
 
-        {loading ? (
-          <div className={styles.empty}>Loading…</div>
-        ) : tab === 'referees' ? (
-          <table className={styles.table}>
-            <thead>
-              <tr><th>Referee</th><th className={styles.num}>Total fouls</th></tr>
-            </thead>
-            <tbody>
-              {filteredReferees.map(r => (
-                <tr key={r.official_id} onClick={() => selectReferee(r)}
-                  className={detail?.data?.referee?.official_id === r.official_id ? styles.selectedRow : styles.row}>
-                  <td>{r.official_name}</td>
-                  <td className={styles.num}>{r.total_fouls.toLocaleString()}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        ) : tab === 'players' ? (
-          <table className={styles.table}>
-            <thead>
-              <tr><th>Player</th><th>Team</th><th className={styles.num}>Total fouls</th></tr>
-            </thead>
-            <tbody>
-              {filteredPlayers.map(p => (
-                <tr key={p.player_id} onClick={() => selectPlayer(p)}
-                  className={detail?.data?.player?.player_id === p.player_id ? styles.selectedRow : styles.row}>
-                  <td>{p.player_name}</td>
-                  <td className={styles.muted}>{p.team_tricode || '—'}</td>
-                  <td className={styles.num}>{p.total_fouls.toLocaleString()}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        ) : (
-          <table className={styles.table}>
-            <thead>
-              <tr><th>Team</th><th className={styles.num}>Total fouls</th></tr>
-            </thead>
-            <tbody>
-              {teams.filter(t => t.team_tricode.toLowerCase().includes(query)).map(t => (
-                <tr key={t.team_tricode} onClick={() => selectTeam(t)}
-                  className={detail?.data?.team_tricode === t.team_tricode ? styles.selectedRow : styles.row}>
-                  <td>{t.team_tricode}</td>
-                  <td className={styles.num}>{t.total_fouls.toLocaleString()}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
+        <div className={styles.listScroll}>
+          {loading ? (
+            <div className={styles.empty}>Loading…</div>
+          ) : tab === 'referees' ? (
+            <table className={styles.table}>
+              <thead><tr><th>Referee</th><th className={styles.num}>Total fouls</th></tr></thead>
+              <tbody>
+                {filteredReferees.map(r => (
+                  <tr key={r.official_id} onClick={() => selectReferee(r)}
+                    className={detail?.data?.referee?.official_id === r.official_id ? styles.selectedRow : styles.row}>
+                    <td>{r.official_name}</td>
+                    <td className={styles.num}>{r.total_fouls.toLocaleString()}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ) : tab === 'players' ? (
+            <table className={styles.table}>
+              <thead><tr><th>Player</th><th>Team</th><th className={styles.num}>Total fouls</th></tr></thead>
+              <tbody>
+                {filteredPlayers.map(p => (
+                  <tr key={p.player_id} onClick={() => selectPlayer(p)}
+                    className={detail?.data?.player?.player_id === p.player_id ? styles.selectedRow : styles.row}>
+                    <td>{p.player_name}</td>
+                    <td className={styles.muted}>{p.team_tricode || '—'}</td>
+                    <td className={styles.num}>{p.total_fouls.toLocaleString()}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ) : (
+            <table className={styles.table}>
+              <thead><tr><th>Team</th><th className={styles.num}>Total fouls</th></tr></thead>
+              <tbody>
+                {filteredTeams.map(t => (
+                  <tr key={t.team_tricode} onClick={() => selectTeam(t)}
+                    className={detail?.data?.team_tricode === t.team_tricode ? styles.selectedRow : styles.row}>
+                    <td>{TEAM_NAMES[t.team_tricode] ?? t.team_tricode} <span className={styles.muted}>({t.team_tricode})</span></td>
+                    <td className={styles.num}>{t.total_fouls.toLocaleString()}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
       </div>
 
       {/* Right: detail */}
@@ -168,11 +175,45 @@ export default function DashboardView() {
   )
 }
 
-const PERIOD_LABEL = p => p <= 4 ? `Q${p}` : `OT${p - 4 > 1 ? p - 4 : ''}`
+function PeriodTable({ period_breakdown }) {
+  if (!period_breakdown?.length) return null
+  const total = period_breakdown.reduce((s, p) => s + p.count, 0)
+  return (
+    <table className={styles.table}>
+      <thead><tr><th>Quarter</th><th className={styles.num}>Count</th><th className={styles.num}>%</th></tr></thead>
+      <tbody>
+        {period_breakdown.map(p => (
+          <tr key={p.period}>
+            <td>{PERIOD_LABEL(p.period)}</td>
+            <td className={styles.num}>{p.count.toLocaleString()}</td>
+            <td className={styles.num}>{total ? ((p.count / total) * 100).toFixed(1) + '%' : '—'}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  )
+}
+
+function FoulTable({ foul_breakdown }) {
+  const total = foul_breakdown.reduce((s, f) => s + f.count, 0)
+  return (
+    <table className={styles.table}>
+      <thead><tr><th>Type</th><th className={styles.num}>Count</th><th className={styles.num}>%</th></tr></thead>
+      <tbody>
+        {foul_breakdown.map(f => (
+          <tr key={f.foul_detail}>
+            <td>{FOUL_LABELS[f.foul_detail] ?? f.foul_detail}</td>
+            <td className={styles.num}>{f.count.toLocaleString()}</td>
+            <td className={styles.num}>{total ? ((f.count / total) * 100).toFixed(1) + '%' : '—'}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  )
+}
 
 function RefereeDetail({ data, season }) {
   const { referee, top_players, foul_breakdown, period_breakdown } = data
-  const total = foul_breakdown.reduce((s, f) => s + f.count, 0)
 
   return (
     <div className={styles.detailInner}>
@@ -184,40 +225,12 @@ function RefereeDetail({ data, season }) {
         </div>
       </div>
 
-      <Section title="Foul breakdown">
-        <table className={styles.table}>
-          <thead><tr><th>Type</th><th className={styles.num}>Count</th><th className={styles.num}>%</th></tr></thead>
-          <tbody>
-            {foul_breakdown.map(f => (
-              <tr key={f.foul_detail}>
-                <td>{FOUL_LABELS[f.foul_detail] ?? f.foul_detail}</td>
-                <td className={styles.num}>{f.count.toLocaleString()}</td>
-                <td className={styles.num}>{total ? ((f.count / total) * 100).toFixed(1) + '%' : '—'}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </Section>
-
-      {period_breakdown?.length > 0 && (() => {
-        const periodTotal = period_breakdown.reduce((s, p) => s + p.count, 0)
-        return (
-          <Section title="Fouls by quarter">
-            <table className={styles.table}>
-              <thead><tr><th>Quarter</th><th className={styles.num}>Count</th><th className={styles.num}>%</th></tr></thead>
-              <tbody>
-                {period_breakdown.map(p => (
-                  <tr key={p.period}>
-                    <td>{PERIOD_LABEL(p.period)}</td>
-                    <td className={styles.num}>{p.count.toLocaleString()}</td>
-                    <td className={styles.num}>{periodTotal ? ((p.count / periodTotal) * 100).toFixed(1) + '%' : '—'}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </Section>
-        )
-      })()}
+      <div className={styles.sectionRow}>
+        <Section title="Foul breakdown"><FoulTable foul_breakdown={foul_breakdown} /></Section>
+        {period_breakdown?.length > 0 && (
+          <Section title="By quarter"><PeriodTable period_breakdown={period_breakdown} /></Section>
+        )}
+      </div>
 
       <Section title="Players called for the most fouls by this referee">
         <table className={styles.table}>
@@ -258,7 +271,6 @@ function RefereeDetail({ data, season }) {
 
 function PlayerDetail({ data, season }) {
   const { player, top_referees, foul_breakdown, period_breakdown } = data
-  const total = foul_breakdown.reduce((s, f) => s + f.count, 0)
 
   return (
     <div className={styles.detailInner}>
@@ -270,40 +282,12 @@ function PlayerDetail({ data, season }) {
         </div>
       </div>
 
-      <Section title="Foul breakdown">
-        <table className={styles.table}>
-          <thead><tr><th>Type</th><th className={styles.num}>Count</th><th className={styles.num}>%</th></tr></thead>
-          <tbody>
-            {foul_breakdown.map(f => (
-              <tr key={f.foul_detail}>
-                <td>{FOUL_LABELS[f.foul_detail] ?? f.foul_detail}</td>
-                <td className={styles.num}>{f.count.toLocaleString()}</td>
-                <td className={styles.num}>{total ? ((f.count / total) * 100).toFixed(1) + '%' : '—'}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </Section>
-
-      {period_breakdown?.length > 0 && (() => {
-        const periodTotal = period_breakdown.reduce((s, p) => s + p.count, 0)
-        return (
-          <Section title="Fouls by quarter">
-            <table className={styles.table}>
-              <thead><tr><th>Quarter</th><th className={styles.num}>Count</th><th className={styles.num}>%</th></tr></thead>
-              <tbody>
-                {period_breakdown.map(p => (
-                  <tr key={p.period}>
-                    <td>{PERIOD_LABEL(p.period)}</td>
-                    <td className={styles.num}>{p.count.toLocaleString()}</td>
-                    <td className={styles.num}>{periodTotal ? ((p.count / periodTotal) * 100).toFixed(1) + '%' : '—'}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </Section>
-        )
-      })()}
+      <div className={styles.sectionRow}>
+        <Section title="Foul breakdown"><FoulTable foul_breakdown={foul_breakdown} /></Section>
+        {period_breakdown?.length > 0 && (
+          <Section title="By quarter"><PeriodTable period_breakdown={period_breakdown} /></Section>
+        )}
+      </div>
 
       <Section title="Referees who called the most fouls on this player">
         <table className={styles.table}>
@@ -343,32 +327,18 @@ function PlayerDetail({ data, season }) {
 
 function TeamDetail({ data, season }) {
   const { team_tricode, top_referees, foul_breakdown } = data
-  const total = foul_breakdown.reduce((s, f) => s + f.count, 0)
 
   return (
     <div className={styles.detailInner}>
       <div className={styles.detailHeader}>
         <span className={styles.dotPlayer} />
         <div>
-          <h2>{team_tricode}</h2>
-          {season && <p className={styles.sub}>{season}</p>}
+          <h2>{TEAM_NAMES[team_tricode] ?? team_tricode}</h2>
+          <p className={styles.sub}>{[team_tricode, season].filter(Boolean).join(' · ')}</p>
         </div>
       </div>
 
-      <Section title="Foul breakdown">
-        <table className={styles.table}>
-          <thead><tr><th>Type</th><th className={styles.num}>Count</th><th className={styles.num}>%</th></tr></thead>
-          <tbody>
-            {foul_breakdown.map(f => (
-              <tr key={f.foul_detail}>
-                <td>{FOUL_LABELS[f.foul_detail] ?? f.foul_detail}</td>
-                <td className={styles.num}>{f.count.toLocaleString()}</td>
-                <td className={styles.num}>{total ? ((f.count / total) * 100).toFixed(1) + '%' : '—'}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </Section>
+      <Section title="Foul breakdown"><FoulTable foul_breakdown={foul_breakdown} /></Section>
 
       <Section title="Referees who called the most fouls on this team">
         <table className={styles.table}>

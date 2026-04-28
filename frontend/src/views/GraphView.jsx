@@ -63,7 +63,10 @@ export default function GraphView() {
         .d3AlphaDecay(0.03)
         .d3VelocityDecay(0.4)
         .onEngineStop(() => {
-          if (graphRef.current) graphRef.current.cooldownTicks(0)
+          if (graphRef.current) {
+            graphRef.current.cooldownTicks(0)
+            graphRef.current.zoom(2.5, 800)
+          }
         })
         .onNodeClick(async node => {
           const id = node.id.slice(2)
@@ -174,7 +177,7 @@ function RefereePanel({ data }) {
           <Row key={f.foul_detail} label={f.foul_detail} value={f.count} />
         ))}
       </Section>
-      <Section title="Top players fouled">
+      <Section title="Players called for the most fouls">
         {top_players.slice(0, 10).map(p => (
           <Row key={p.fouler_player_id} label={p.fouler_player_name} value={`${p.total_fouls} fouls`} />
         ))}
@@ -205,7 +208,7 @@ function PlayerPanel({ data }) {
           <Row key={f.foul_detail} label={f.foul_detail} value={f.count} />
         ))}
       </Section>
-      <Section title="Top referees">
+      <Section title="Referees who called the most fouls">
         {top_referees.slice(0, 10).map(r => (
           <Row key={r.official_id} label={r.official_name} value={`${r.total_fouls} fouls`} />
         ))}

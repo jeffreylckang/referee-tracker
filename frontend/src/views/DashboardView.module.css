@@ -43,6 +43,23 @@
 
 .listHeader select { width: 100%; }
 
+.listScroll {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.sectionRow {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 28px;
+}
+
+.sectionRow > * {
+  flex: 1;
+  min-width: 0;
+  margin-bottom: 0;
+}
+
 /* Right detail panel */
 .detail {
   flex: 1;
