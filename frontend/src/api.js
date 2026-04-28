@@ -10,12 +10,13 @@ export async function fetchFilters() {
   return r.json()
 }
 
-export async function fetchGraph({ season, foul_detail, game_type, team, min_fouls = 3 } = {}) {
+export async function fetchGraph({ season, foul_detail, game_type, team, official_id, min_fouls = 3 } = {}) {
   const params = new URLSearchParams()
   if (season)      params.set('season',      season)
   if (foul_detail) params.set('foul_detail', foul_detail)
   if (game_type)   params.set('game_type',   game_type)
   if (team)        params.set('team',        team)
+  if (official_id) params.set('official_id', official_id)
   params.set('min_fouls', min_fouls)
   const r = await fetch(`${BASE}/api/graph?${params}`)
   return r.json()

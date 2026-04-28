@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import ForceGraph from 'force-graph'
-import { fetchGraph, fetchFilters, fetchReferee, fetchPlayer } from '../api'
+import { fetchGraph, fetchFilters, fetchReferees, fetchReferee, fetchPlayer } from '../api'
 import styles from './GraphView.module.css'
 
 const FOUL_LABELS = {
@@ -17,32 +17,39 @@ export default function GraphView() {
   const mountRef      = useRef(null)
   const graphRef      = useRef(null)
   const dataRef       = useRef({ nodes: [], links: [] })
-  const hlNodes       = useRef(new Set())   // highlighted node objects
-  const hlLinks       = useRef(new Set())   // highlighted link objects
-  const hoverNodeRef  = useRef(null)
+  const hlNodes = useRef(new Set())   // highlighted node objects
+  const hlLinks = useRef(new Set())   // highlighted link objects
 
-  const [filters,  setFilters]  = useState({ seasons: [], foul_types: [], teams: [] })
-  const [season,   setSeason]   = useState('2025-26')   // default: current season
-  const [foulType, setFoulType] = useState('')
-  const [gameType, setGameType] = useState('')
-  const [team,     setTeam]     = useState('')
-  const [loading,  setLoading]  = useState(true)
-  const [panel,    setPanel]    = useState(null)
+  const [filters,          setFilters]          = useState({ seasons: [], foul_types: [], teams: [] })
+  const [refereeList,      setRefereeList]      = useState([])
+  const [season,           setSeason]           = useState('')
+  const [foulType,         setFoulType]         = useState('')
+  const [gameType,         setGameType]         = useState('')
+  const [team,             setTeam]             = useState('')
+  const [selectedReferee,  setSelectedReferee]  = useState(null)  // official_id
+  const [loading,          setLoading]          = useState(true)
+  const [panel,            setPanel]            = useState(null)
+  const selectedNodeRef = useRef(null)
 
-  // Load filter options; update season to actual most recent from DB
+  // Load filter options and referee list; default to top referee
   useEffect(() => {
-    fetchFilters().then(f => {
-      setFilters(f)
-      if (f.seasons.length > 0) {
-        const latest = f.seasons[f.seasons.length - 1]
-        setSeason(prev => prev === latest ? prev : latest)
-      }
+    fetchFilters().then(f => setFilters(f))
+    fetchReferees().then(refs => {
+      setRefereeList(refs)
+      if (refs.length > 0) setSelectedReferee(refs[0].official_id)
     })
   }, [])
 
   const loadGraph = useCallback(async () => {
+    if (selectedReferee === null) return  // wait until default referee is set
+    // Clear highlight state when graph reloads
+    selectedNodeRef.current = null
+    hlNodes.current.clear()
+    hlLinks.current.clear()
+    setPanel(null)
     setLoading(true)
-    const data = await fetchGraph({ season, foul_detail: foulType, game_type: gameType, team, min_fouls: 3 })
+    const minFouls = selectedReferee ? 1 : 3
+    const data = await fetchGraph({ season, foul_detail: foulType, game_type: gameType, team, official_id: selectedReferee, min_fouls: minFouls })
     setLoading(false)
     dataRef.current = data
 
@@ -58,7 +65,6 @@ export default function GraphView() {
         .nodeCanvasObject((node, ctx, globalScale) => {
           const r = 5
           const isHl = hlNodes.current.size === 0 || hlNodes.current.has(node)
-          const isHovered = hoverNodeRef.current === node
 
           ctx.globalAlpha = isHl ? 1 : 0.12
 
@@ -90,8 +96,9 @@ export default function GraphView() {
             }
           }
 
-          // Label: show when hovered, connected to hovered node, or zoomed in
-          const showLabel = isHovered || globalScale > 3 || (isHovered && isHl)
+          // Label: show when this node is selected/connected, or zoomed in
+          const isSelected = selectedNodeRef.current === node
+          const showLabel = isSelected || (hlNodes.current.size > 0 && hlNodes.current.has(node)) || globalScale > 3
           if (showLabel) {
             const fontSize = Math.min(4, 14 / globalScale)
             ctx.font = `500 ${fontSize}px -apple-system, sans-serif`
@@ -136,26 +143,32 @@ export default function GraphView() {
           ctx.lineWidth = isHl && hlLinks.current.size > 0 ? 1 : 0.5
           ctx.stroke()
         })
-        // Hover: highlight connected nodes + links, dim everything else
-        .onNodeHover(node => {
-          hoverNodeRef.current = node
+        // Click: highlight connected nodes + links, dim everything else
+        // Click same node again to deselect
+        .onNodeClick(async node => {
+          if (selectedNodeRef.current === node) {
+            // Deselect
+            selectedNodeRef.current = null
+            hlNodes.current.clear()
+            hlLinks.current.clear()
+            setPanel(null)
+            return
+          }
+          // Select: highlight this node's connections
+          selectedNodeRef.current = node
           hlNodes.current.clear()
           hlLinks.current.clear()
-          if (node) {
-            hlNodes.current.add(node)
-            dataRef.current.links.forEach(link => {
-              const s = link.source
-              const t = link.target
-              if (s === node || t === node) {
-                hlLinks.current.add(link)
-                hlNodes.current.add(s)
-                hlNodes.current.add(t)
-              }
-            })
-          }
-        })
-        // Click opens detail panel
-        .onNodeClick(async node => {
+          hlNodes.current.add(node)
+          dataRef.current.links.forEach(link => {
+            const s = link.source
+            const t = link.target
+            if (s === node || t === node) {
+              hlLinks.current.add(link)
+              hlNodes.current.add(s)
+              hlNodes.current.add(t)
+            }
+          })
+          // Open detail panel
           const id = node.id.slice(2)
           if (node.type === 'referee') {
             const data = await fetchReferee(id, { season: season || undefined, game_type: gameType || undefined })
@@ -186,7 +199,7 @@ export default function GraphView() {
     }
 
     graphRef.current.graphData(data)
-  }, [season, foulType, gameType, team])
+  }, [season, foulType, gameType, team, selectedReferee])
 
   useEffect(() => {
     loadGraph()
@@ -206,6 +219,11 @@ export default function GraphView() {
   return (
     <div className={styles.wrap}>
       <div className={styles.filters}>
+        <select value={selectedReferee ?? ''} onChange={e => setSelectedReferee(e.target.value ? Number(e.target.value) : null)}>
+          <option value="">All referees</option>
+          {refereeList.map(r => <option key={r.official_id} value={r.official_id}>{r.official_name}</option>)}
+        </select>
+
         <select value={season} onChange={e => setSeason(e.target.value)}>
           <option value="">All seasons</option>
           {filters.seasons.map(s => <option key={s} value={s}>{s}</option>)}
@@ -233,7 +251,7 @@ export default function GraphView() {
       <div className={styles.legend}>
         <span><span className={styles.dotReferee} /> Referee</span>
         <span><span className={styles.dotPlayer}  /> Player</span>
-        <span className={styles.hint}>Hover a node to see connections · Click for details · Scroll to zoom</span>
+        <span className={styles.hint}>Click a node to highlight connections · Click again to deselect · Scroll to zoom</span>
       </div>
 
       <div ref={mountRef} className={styles.canvas} />

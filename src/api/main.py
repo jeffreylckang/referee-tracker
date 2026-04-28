@@ -142,9 +142,10 @@ def get_graph(
     foul_detail: Optional[str] = Query(None),
     game_type:   Optional[str] = Query(None),
     team:        Optional[str] = Query(None),
+    official_id: Optional[int] = Query(None),
     min_fouls:   int           = Query(3, ge=1),
 ):
-    cache_key = f"graph:{season}:{foul_detail}:{game_type}:{team}:{min_fouls}"
+    cache_key = f"graph:{season}:{foul_detail}:{game_type}:{team}:{official_id}:{min_fouls}"
     cached = cache_get(cache_key)
     if cached:
         return cached
@@ -166,12 +167,13 @@ def get_graph(
           AND (%(season)s      IS NULL OR g.season              = %(season)s)
           AND (%(foul_detail)s IS NULL OR f.foul_detail         = %(foul_detail)s)
           AND (%(team)s        IS NULL OR f.fouler_team_tricode = %(team)s)
+          AND (%(official_id)s IS NULL OR f.official_id        = %(official_id)s)
           {GAME_TYPE_CLAUSE}
         GROUP BY f.official_id, f.official_name, f.fouler_player_id, f.fouler_player_name
         HAVING COUNT(*) >= %(min_fouls)s
         ORDER BY foul_count DESC
     """, {"season": season, "foul_detail": foul_detail, "team": team,
-          "game_type": game_type, "min_fouls": min_fouls})
+          "game_type": game_type, "official_id": official_id, "min_fouls": min_fouls})
 
     rows = cur.fetchall()
     cur.close()
