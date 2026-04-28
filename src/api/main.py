@@ -166,25 +166,27 @@ def get_players(
     conn = get_conn()
     cur  = conn.cursor()
     cur.execute(f"""
+        WITH latest_team AS (
+            SELECT DISTINCT ON (fouler_player_id)
+                fouler_player_id,
+                fouler_team_tricode
+            FROM foul_events
+            WHERE fouler_team_tricode IS NOT NULL
+            ORDER BY fouler_player_id, game_id DESC
+        )
         SELECT
             p.player_id,
             p.player_name,
-            (
-                SELECT fouler_team_tricode
-                FROM foul_events
-                WHERE fouler_player_id = p.player_id
-                  AND fouler_team_tricode IS NOT NULL
-                ORDER BY game_id DESC
-                LIMIT 1
-            ) AS team_tricode,
+            lt.fouler_team_tricode AS team_tricode,
             COUNT(f.fouler_player_id) AS total_fouls
         FROM players p
+        LEFT JOIN latest_team lt ON lt.fouler_player_id = p.player_id
         LEFT JOIN foul_events f ON p.player_id = f.fouler_player_id
         LEFT JOIN games g ON f.game_id = g.game_id
         WHERE (%(season)s      IS NULL OR g.season      = %(season)s      OR g.season IS NULL)
           AND (%(foul_detail)s IS NULL OR f.foul_detail = %(foul_detail)s OR f.foul_detail IS NULL)
           {GAME_TYPE_CLAUSE}
-        GROUP BY p.player_id, p.player_name
+        GROUP BY p.player_id, p.player_name, lt.fouler_team_tricode
         ORDER BY total_fouls DESC
     """, {"season": season, "game_type": game_type, "foul_detail": foul_detail})
     rows = cur.fetchall()
