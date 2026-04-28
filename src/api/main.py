@@ -286,15 +286,16 @@ def get_players(
                 WHERE fouler_team_tricode IS NOT NULL
                 ORDER BY fouler_player_id, game_id DESC
             )
-            SELECT f.fouler_player_id                AS player_id,
-                   MAX(f.fouler_player_name)         AS player_name,
-                   lt.fouler_team_tricode            AS team_tricode,
-                   COUNT(*)                          AS total_fouls
+            SELECT p.player_id,
+                   p.player_name,
+                   lt.fouler_team_tricode AS team_tricode,
+                   COUNT(*)              AS total_fouls
             FROM foul_events f
+            JOIN players p ON p.player_id = f.fouler_player_id
             LEFT JOIN latest_team lt ON lt.fouler_player_id = f.fouler_player_id
             WHERE f.fouler_player_id IS NOT NULL
               AND (%(foul_detail)s IS NULL OR f.foul_detail = %(foul_detail)s)
-            GROUP BY f.fouler_player_id, lt.fouler_team_tricode
+            GROUP BY p.player_id, p.player_name, lt.fouler_team_tricode
             ORDER BY total_fouls DESC
         """, {"foul_detail": foul_detail})
     else:
