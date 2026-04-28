@@ -43,6 +43,24 @@ export async function fetchReferee(id, { season, game_type, foul_detail } = {}) 
   return r.json()
 }
 
+export async function fetchTeams({ season, game_type, foul_detail } = {}) {
+  const params = new URLSearchParams()
+  if (season)      params.set('season',      season)
+  if (game_type)   params.set('game_type',   game_type)
+  if (foul_detail) params.set('foul_detail', foul_detail)
+  const r = await fetch(`${BASE}/api/teams?${params}`)
+  return r.json()
+}
+
+export async function fetchTeam(tricode, { season, game_type, foul_detail } = {}) {
+  const params = new URLSearchParams()
+  if (season)      params.set('season',      season)
+  if (game_type)   params.set('game_type',   game_type)
+  if (foul_detail) params.set('foul_detail', foul_detail)
+  const r = await fetch(`${BASE}/api/team/${tricode}?${params}`)
+  return r.json()
+}
+
 export async function fetchPlayer(id, { season, game_type, foul_detail } = {}) {
   const params = new URLSearchParams()
   if (season)      params.set('season',      season)

@@ -196,6 +196,96 @@ def get_players(
 
 
 # ---------------------------------------------------------------------------
+# /api/teams
+# ---------------------------------------------------------------------------
+
+@app.get("/api/teams")
+def get_teams(
+    season:      Optional[str] = Query(None),
+    game_type:   Optional[str] = Query(None),
+    foul_detail: Optional[str] = Query(None),
+):
+    conn = get_conn()
+    cur  = conn.cursor()
+    cur.execute(f"""
+        SELECT
+            f.fouler_team_tricode AS team_tricode,
+            COUNT(*) AS total_fouls
+        FROM foul_events f
+        JOIN games g ON f.game_id = g.game_id
+        WHERE f.fouler_team_tricode IS NOT NULL
+          AND (%(season)s      IS NULL OR g.season      = %(season)s)
+          AND (%(foul_detail)s IS NULL OR f.foul_detail = %(foul_detail)s)
+          {GAME_TYPE_CLAUSE}
+        GROUP BY f.fouler_team_tricode
+        ORDER BY total_fouls DESC
+    """, {"season": season, "game_type": game_type, "foul_detail": foul_detail})
+    rows = cur.fetchall()
+    cur.close()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
+# ---------------------------------------------------------------------------
+# /api/team/{tricode}
+# ---------------------------------------------------------------------------
+
+@app.get("/api/team/{team_tricode}")
+def get_team(
+    team_tricode: str,
+    season:       Optional[str] = Query(None),
+    game_type:    Optional[str] = Query(None),
+    foul_detail:  Optional[str] = Query(None),
+):
+    conn = get_conn()
+    cur  = conn.cursor()
+
+    params = {"team_tricode": team_tricode, "season": season,
+              "game_type": game_type, "foul_detail": foul_detail}
+
+    cur.execute(f"""
+        SELECT
+            f.official_id,
+            f.official_name,
+            COUNT(*)                                                        AS total_fouls,
+            SUM(CASE WHEN f.foul_detail = 'shooting'   THEN 1 ELSE 0 END) AS shooting,
+            SUM(CASE WHEN f.foul_detail = 'personal'   THEN 1 ELSE 0 END) AS personal,
+            SUM(CASE WHEN f.foul_detail = 'offensive'  THEN 1 ELSE 0 END) AS offensive,
+            SUM(CASE WHEN f.foul_detail = 'loose_ball' THEN 1 ELSE 0 END) AS loose_ball,
+            SUM(CASE WHEN f.foul_detail = 'flagrant_1' THEN 1 ELSE 0 END) AS flagrant_1,
+            SUM(CASE WHEN f.foul_detail = 'flagrant_2' THEN 1 ELSE 0 END) AS flagrant_2,
+            SUM(CASE WHEN f.foul_detail = 'technical'  THEN 1 ELSE 0 END) AS technical
+        FROM foul_events f
+        JOIN games g ON f.game_id = g.game_id
+        WHERE f.fouler_team_tricode = %(team_tricode)s
+          AND f.official_id IS NOT NULL
+          AND (%(season)s      IS NULL OR g.season      = %(season)s)
+          AND (%(foul_detail)s IS NULL OR f.foul_detail = %(foul_detail)s)
+          {GAME_TYPE_CLAUSE}
+        GROUP BY f.official_id, f.official_name
+        ORDER BY total_fouls DESC
+        LIMIT 25
+    """, params)
+    top_referees = [dict(r) for r in cur.fetchall()]
+
+    cur.execute(f"""
+        SELECT foul_detail, COUNT(*) AS count
+        FROM foul_events f
+        JOIN games g ON f.game_id = g.game_id
+        WHERE f.fouler_team_tricode = %(team_tricode)s
+          AND (%(season)s IS NULL OR g.season = %(season)s)
+          {GAME_TYPE_CLAUSE}
+        GROUP BY foul_detail
+        ORDER BY count DESC
+    """, params)
+    foul_breakdown = [dict(r) for r in cur.fetchall()]
+
+    cur.close()
+    conn.close()
+    return {"team_tricode": team_tricode, "top_referees": top_referees, "foul_breakdown": foul_breakdown}
+
+
+# ---------------------------------------------------------------------------
 # /api/referee/{id}
 # ---------------------------------------------------------------------------
 
