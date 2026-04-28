@@ -1,0 +1,234 @@
+.wrap {
+  height: 100%;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Top bar */
+.topBar {
+  flex-shrink: 0;
+  padding: 16px 24px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.tabs {
+  display: flex;
+  gap: 4px;
+}
+
+.tab, .tabActive {
+  padding: 5px 14px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.tab       { color: var(--text-muted); }
+.tab:hover { background: var(--border); color: var(--text); }
+.tabActive { background: var(--accent); color: #fff; }
+
+.filtersRow {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.filtersRow select { width: auto; min-width: 160px; }
+
+/* Pickers */
+.pickersRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.picker { flex: 1; position: relative; }
+
+.pickerInput { position: relative; }
+
+.pickerInput input { width: 100%; }
+
+.dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 20;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow-y: auto;
+  max-height: 220px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+}
+
+.dropdownItem {
+  padding: 8px 12px;
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.dropdownItem:hover { background: var(--border); }
+
+.dropdownTeam {
+  font-size: 11px;
+  color: var(--text-muted);
+  background: var(--border);
+  border-radius: 4px;
+  padding: 1px 5px;
+  margin-left: auto;
+}
+
+.vs {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-muted);
+  flex-shrink: 0;
+  padding: 0 4px;
+}
+
+/* Compare area */
+.compareArea {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+}
+
+.side {
+  flex: 1;
+  overflow-y: auto;
+  padding: 28px 32px;
+}
+
+.divider {
+  width: 1px;
+  background: var(--border);
+  flex-shrink: 0;
+}
+
+/* Empty state */
+.empty {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+/* Card header */
+.cardHeader {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 32px;
+}
+
+.cardHeader h2 {
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.totalFouls {
+  font-size: 14px;
+  color: var(--text-muted);
+  margin-top: 3px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.teamBadge {
+  font-size: 11px;
+  color: var(--text-muted);
+  background: var(--border);
+  border-radius: 4px;
+  padding: 1px 6px;
+}
+
+/* Dots */
+.dotReferee {
+  display: inline-block;
+  width: 14px; height: 14px;
+  clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
+  background: var(--referee);
+  flex-shrink: 0;
+}
+
+.dotPlayer {
+  display: inline-block;
+  width: 14px; height: 14px;
+  border-radius: 50%;
+  background: var(--player);
+  flex-shrink: 0;
+}
+
+/* Section */
+.section { margin-bottom: 36px; }
+
+.sectionTitle {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+  padding-bottom: 10px;
+  margin-bottom: 14px;
+  border-bottom: 1px solid rgba(230, 237, 243, 0.1);
+}
+
+/* Table */
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.table thead th {
+  text-align: left;
+  padding: 6px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border);
+}
+
+.table thead th.num { text-align: right; }
+
+.table tbody td {
+  padding: 8px 10px;
+  border-bottom: 1px solid rgba(48, 54, 61, 0.7);
+}
+
+.num   { font-variant-numeric: tabular-nums; text-align: right; }
+.muted { color: var(--text-muted); }
+
+/* Top 3 relationship list */
+.relList {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.relItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 14px;
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(48, 54, 61, 0.7);
+}
+
+.relCount {
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+  font-size: 13px;
+}
