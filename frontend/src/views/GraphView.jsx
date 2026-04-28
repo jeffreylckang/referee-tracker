@@ -59,9 +59,7 @@ export default function GraphView() {
     if (!graphRef.current) {
       graphRef.current = ForceGraph()(el)
         .backgroundColor('#0d1117')
-        // Tooltip on hover (always)
         .nodeLabel(n => `${n.name} (${n.foul_count} fouls)`)
-        // Custom node rendering: diamond = referee, circle = player
         .nodeCanvasObject((node, ctx, globalScale) => {
           const r = 5
           const isHl = hlNodes.current.size === 0 || hlNodes.current.has(node)
@@ -69,11 +67,10 @@ export default function GraphView() {
           ctx.globalAlpha = isHl ? 1 : 0.12
 
           if (node.type === 'referee') {
-            // Diamond
             ctx.beginPath()
-            ctx.moveTo(node.x,         node.y - r * 1.4)
+            ctx.moveTo(node.x,           node.y - r * 1.4)
             ctx.lineTo(node.x + r * 1.4, node.y)
-            ctx.lineTo(node.x,         node.y + r * 1.4)
+            ctx.lineTo(node.x,           node.y + r * 1.4)
             ctx.lineTo(node.x - r * 1.4, node.y)
             ctx.closePath()
             ctx.fillStyle = '#f97316'
@@ -84,7 +81,6 @@ export default function GraphView() {
               ctx.stroke()
             }
           } else {
-            // Circle
             ctx.beginPath()
             ctx.arc(node.x, node.y, r, 0, 2 * Math.PI)
             ctx.fillStyle = '#38bdf8'
@@ -96,7 +92,6 @@ export default function GraphView() {
             }
           }
 
-          // Label: show when this node is selected/connected, or zoomed in
           const isSelected = selectedNodeRef.current === node
           const showLabel = isSelected || (hlNodes.current.size > 0 && hlNodes.current.has(node)) || globalScale > 3
           if (showLabel) {
@@ -111,7 +106,6 @@ export default function GraphView() {
 
           ctx.globalAlpha = 1
         })
-        // Hit area (generous, matches visible shape)
         .nodePointerAreaPaint((node, color, ctx) => {
           const r = 8
           ctx.beginPath()
@@ -127,7 +121,6 @@ export default function GraphView() {
           ctx.fillStyle = color
           ctx.fill()
         })
-        // Custom link rendering for highlight control
         .linkCanvasObjectMode(() => 'replace')
         .linkCanvasObject((link, ctx) => {
           const isHl = hlLinks.current.size === 0 || hlLinks.current.has(link)
@@ -137,69 +130,64 @@ export default function GraphView() {
           ctx.beginPath()
           ctx.moveTo(src.x, src.y)
           ctx.lineTo(tgt.x, tgt.y)
-          ctx.strokeStyle = isHl
-            ? 'rgba(255,255,255,0.55)'
-            : 'rgba(255,255,255,0.05)'
+          ctx.strokeStyle = isHl ? 'rgba(255,255,255,0.55)' : 'rgba(255,255,255,0.05)'
           ctx.lineWidth = isHl && hlLinks.current.size > 0 ? 1 : 0.5
           ctx.stroke()
         })
-        // Click: highlight connected nodes + links, dim everything else
-        // Click same node again to deselect
-        .onNodeClick(async node => {
-          if (selectedNodeRef.current === node) {
-            // Deselect — clear immediately and repaint
-            selectedNodeRef.current = null
-            hlNodes.current.clear()
-            hlLinks.current.clear()
-            graphRef.current.refresh()
-            setPanel(null)
-            return
-          }
-          // Select: update highlight refs and repaint instantly (sync)
-          selectedNodeRef.current = node
-          hlNodes.current.clear()
-          hlLinks.current.clear()
-          hlNodes.current.add(node)
-          dataRef.current.links.forEach(link => {
-            const s = link.source
-            const t = link.target
-            if (s === node || t === node) {
-              hlLinks.current.add(link)
-              hlNodes.current.add(s)
-              hlNodes.current.add(t)
-            }
-          })
-          graphRef.current.refresh()  // instant repaint before async fetch
-          // Load detail panel in the background
-          const id = node.id.slice(2)
-          if (node.type === 'referee') {
-            const data = await fetchReferee(id, { season: season || undefined, game_type: gameType || undefined })
-            setPanel({ type: 'referee', data })
-          } else {
-            const data = await fetchPlayer(id, { season: season || undefined, game_type: gameType || undefined })
-            setPanel({ type: 'player', data })
-          }
+        // Don't stop cooldown here — just zoom. Stopping cooldown breaks subsequent loads.
+        .onEngineStop(() => {
+          if (graphRef.current) graphRef.current.zoom(3, 1000)
         })
-        // Simulation: referees repel each other strongly → act as hubs
         .cooldownTicks(180)
         .d3AlphaDecay(0.02)
         .d3VelocityDecay(0.35)
-        .onEngineStop(() => {
-          if (graphRef.current) {
-            graphRef.current.cooldownTicks(0)
-            graphRef.current.zoom(3, 1000)
-          }
-        })
 
       graphRef.current.width(el.clientWidth).height(el.clientHeight)
-
-      // Referee nodes repel each other strongly so they spread as hubs
-      // Player nodes have light repulsion so they cluster near their referees
       graphRef.current.d3Force('charge').strength(n => n.type === 'referee' ? -350 : -40)
-      // Short link distance keeps players close to their referee hubs
       graphRef.current.d3Force('link').distance(40).strength(0.6)
     }
 
+    // Re-register click handler every load so it closes over current season/gameType
+    graphRef.current.onNodeClick(async node => {
+      if (selectedNodeRef.current === node) {
+        selectedNodeRef.current = null
+        hlNodes.current.clear()
+        hlLinks.current.clear()
+        setPanel(null)
+        // Reheat briefly to force a repaint, then cool immediately
+        graphRef.current.d3ReheatSimulation()
+        setTimeout(() => graphRef.current?.cooldownTicks(0), 100)
+        return
+      }
+      selectedNodeRef.current = node
+      hlNodes.current.clear()
+      hlLinks.current.clear()
+      hlNodes.current.add(node)
+      dataRef.current.links.forEach(link => {
+        const s = link.source
+        const t = link.target
+        if (s === node || t === node) {
+          hlLinks.current.add(link)
+          hlNodes.current.add(s)
+          hlNodes.current.add(t)
+        }
+      })
+      // Reheat briefly to force a repaint, then cool immediately
+      graphRef.current.d3ReheatSimulation()
+      setTimeout(() => graphRef.current?.cooldownTicks(0), 100)
+      // Load detail panel in the background
+      const id = node.id.slice(2)
+      if (node.type === 'referee') {
+        const data = await fetchReferee(id, { season: season || undefined, game_type: gameType || undefined })
+        setPanel({ type: 'referee', data })
+      } else {
+        const data = await fetchPlayer(id, { season: season || undefined, game_type: gameType || undefined })
+        setPanel({ type: 'player', data })
+      }
+    })
+
+    // Reset cooldown ticks before each new data load so physics runs properly
+    graphRef.current.cooldownTicks(180)
     graphRef.current.graphData(data)
   }, [season, foulType, gameType, team, selectedReferee])
 
