@@ -144,7 +144,7 @@ export default function GraphView() {
 
       graphRef.current.width(el.clientWidth).height(el.clientHeight)
       graphRef.current.d3Force('charge').strength(n => n.type === 'referee' ? -350 : -40)
-      graphRef.current.d3Force('link').distance(40).strength(0.6)
+      graphRef.current.d3Force('link').distance(link => 15 + 50 / Math.sqrt(link.count || 1)).strength(0.6)
     }
 
     // Re-register click handler every load so it closes over current season/gameType
