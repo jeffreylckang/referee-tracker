@@ -168,8 +168,10 @@ export default function DashboardView() {
   )
 }
 
+const PERIOD_LABEL = p => p <= 4 ? `Q${p}` : `OT${p - 4 > 1 ? p - 4 : ''}`
+
 function RefereeDetail({ data, season }) {
-  const { referee, top_players, foul_breakdown } = data
+  const { referee, top_players, foul_breakdown, period_breakdown } = data
   const total = foul_breakdown.reduce((s, f) => s + f.count, 0)
 
   return (
@@ -196,6 +198,26 @@ function RefereeDetail({ data, season }) {
           </tbody>
         </table>
       </Section>
+
+      {period_breakdown?.length > 0 && (() => {
+        const periodTotal = period_breakdown.reduce((s, p) => s + p.count, 0)
+        return (
+          <Section title="Fouls by quarter">
+            <table className={styles.table}>
+              <thead><tr><th>Quarter</th><th className={styles.num}>Count</th><th className={styles.num}>%</th></tr></thead>
+              <tbody>
+                {period_breakdown.map(p => (
+                  <tr key={p.period}>
+                    <td>{PERIOD_LABEL(p.period)}</td>
+                    <td className={styles.num}>{p.count.toLocaleString()}</td>
+                    <td className={styles.num}>{periodTotal ? ((p.count / periodTotal) * 100).toFixed(1) + '%' : '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </Section>
+        )
+      })()}
 
       <Section title="Players called for the most fouls by this referee">
         <table className={styles.table}>
@@ -235,7 +257,7 @@ function RefereeDetail({ data, season }) {
 }
 
 function PlayerDetail({ data, season }) {
-  const { player, top_referees, foul_breakdown } = data
+  const { player, top_referees, foul_breakdown, period_breakdown } = data
   const total = foul_breakdown.reduce((s, f) => s + f.count, 0)
 
   return (
@@ -262,6 +284,26 @@ function PlayerDetail({ data, season }) {
           </tbody>
         </table>
       </Section>
+
+      {period_breakdown?.length > 0 && (() => {
+        const periodTotal = period_breakdown.reduce((s, p) => s + p.count, 0)
+        return (
+          <Section title="Fouls by quarter">
+            <table className={styles.table}>
+              <thead><tr><th>Quarter</th><th className={styles.num}>Count</th><th className={styles.num}>%</th></tr></thead>
+              <tbody>
+                {period_breakdown.map(p => (
+                  <tr key={p.period}>
+                    <td>{PERIOD_LABEL(p.period)}</td>
+                    <td className={styles.num}>{p.count.toLocaleString()}</td>
+                    <td className={styles.num}>{periodTotal ? ((p.count / periodTotal) * 100).toFixed(1) + '%' : '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </Section>
+        )
+      })()}
 
       <Section title="Referees who called the most fouls on this player">
         <table className={styles.table}>

@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "3d-force-graph": "^1.80.0",
+    "force-graph": "^1.51.4",
     "react": "^19.2.5",
     "react-dom": "^19.2.5",
     "react-router-dom": "^7.14.2"

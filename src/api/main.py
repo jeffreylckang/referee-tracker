@@ -344,9 +344,24 @@ def get_referee(
     """, params)
     foul_breakdown = [dict(r) for r in cur.fetchall()]
 
+    cur.execute(f"""
+        SELECT period, COUNT(*) AS count
+        FROM foul_events f
+        JOIN games g ON f.game_id = g.game_id
+        WHERE f.official_id = %(official_id)s
+          AND f.period IS NOT NULL
+          AND (%(season)s      IS NULL OR g.season      = %(season)s)
+          AND (%(foul_detail)s IS NULL OR f.foul_detail = %(foul_detail)s)
+          {GAME_TYPE_CLAUSE}
+        GROUP BY period
+        ORDER BY period
+    """, params)
+    period_breakdown = [dict(r) for r in cur.fetchall()]
+
     cur.close()
     conn.close()
-    return {"referee": dict(referee), "top_players": top_players, "foul_breakdown": foul_breakdown}
+    return {"referee": dict(referee), "top_players": top_players,
+            "foul_breakdown": foul_breakdown, "period_breakdown": period_breakdown}
 
 
 # ---------------------------------------------------------------------------
@@ -408,6 +423,21 @@ def get_player(
     """, params)
     foul_breakdown = [dict(r) for r in cur.fetchall()]
 
+    cur.execute(f"""
+        SELECT period, COUNT(*) AS count
+        FROM foul_events f
+        JOIN games g ON f.game_id = g.game_id
+        WHERE f.fouler_player_id = %(player_id)s
+          AND f.period IS NOT NULL
+          AND (%(season)s      IS NULL OR g.season      = %(season)s)
+          AND (%(foul_detail)s IS NULL OR f.foul_detail = %(foul_detail)s)
+          {GAME_TYPE_CLAUSE}
+        GROUP BY period
+        ORDER BY period
+    """, params)
+    period_breakdown = [dict(r) for r in cur.fetchall()]
+
     cur.close()
     conn.close()
-    return {"player": dict(player), "top_referees": top_referees, "foul_breakdown": foul_breakdown}
+    return {"player": dict(player), "top_referees": top_referees,
+            "foul_breakdown": foul_breakdown, "period_breakdown": period_breakdown}
