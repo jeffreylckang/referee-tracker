@@ -18,10 +18,29 @@ Run locally:
     DATABASE_URL=... uvicorn src.api.main:app --reload
 """
 
+import time
 from fastapi import FastAPI, Query, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from typing import Optional
 from .db import get_conn
+
+# ---------------------------------------------------------------------------
+# Simple in-memory cache — avoids hitting the DB on every request
+# ---------------------------------------------------------------------------
+
+_cache: dict = {}
+CACHE_TTL = 600  # 10 minutes
+
+
+def cache_get(key: str):
+    entry = _cache.get(key)
+    if entry and time.time() - entry["ts"] < CACHE_TTL:
+        return entry["data"]
+    return None
+
+
+def cache_set(key: str, data):
+    _cache[key] = {"data": data, "ts": time.time()}
 
 app = FastAPI(title="Referee Tracker API")
 
@@ -46,6 +65,10 @@ GAME_TYPE_CLAUSE = """
 
 @app.get("/api/filters")
 def get_filters():
+    cached = cache_get("filters")
+    if cached:
+        return cached
+
     conn = get_conn()
     cur  = conn.cursor()
 
@@ -60,7 +83,9 @@ def get_filters():
 
     cur.close()
     conn.close()
-    return {"seasons": seasons, "foul_types": foul_types, "teams": teams}
+    result = {"seasons": seasons, "foul_types": foul_types, "teams": teams}
+    cache_set("filters", result)
+    return result
 
 
 # ---------------------------------------------------------------------------
@@ -119,6 +144,11 @@ def get_graph(
     team:        Optional[str] = Query(None),
     min_fouls:   int           = Query(3, ge=1),
 ):
+    cache_key = f"graph:{season}:{foul_detail}:{game_type}:{team}:{min_fouls}"
+    cached = cache_get(cache_key)
+    if cached:
+        return cached
+
     conn = get_conn()
     cur  = conn.cursor()
 
@@ -162,7 +192,9 @@ def get_graph(
 
         links.append({"source": rid, "target": pid, "count": r["foul_count"]})
 
-    return {"nodes": list(referees.values()) + list(players.values()), "links": links}
+    result = {"nodes": list(referees.values()) + list(players.values()), "links": links}
+    cache_set(cache_key, result)
+    return result
 
 
 # ---------------------------------------------------------------------------
@@ -175,6 +207,11 @@ def get_referees(
     game_type:   Optional[str] = Query(None),
     foul_detail: Optional[str] = Query(None),
 ):
+    cache_key = f"referees:{season}:{game_type}:{foul_detail}"
+    cached = cache_get(cache_key)
+    if cached:
+        return cached
+
     conn = get_conn()
     cur  = conn.cursor()
     cur.execute(f"""
@@ -194,7 +231,9 @@ def get_referees(
     rows = cur.fetchall()
     cur.close()
     conn.close()
-    return [dict(r) for r in rows]
+    result = [dict(r) for r in rows]
+    cache_set(cache_key, result)
+    return result
 
 
 # ---------------------------------------------------------------------------
@@ -207,6 +246,11 @@ def get_players(
     game_type:   Optional[str] = Query(None),
     foul_detail: Optional[str] = Query(None),
 ):
+    cache_key = f"players:{season}:{game_type}:{foul_detail}"
+    cached = cache_get(cache_key)
+    if cached:
+        return cached
+
     conn = get_conn()
     cur  = conn.cursor()
     cur.execute(f"""
@@ -236,7 +280,9 @@ def get_players(
     rows = cur.fetchall()
     cur.close()
     conn.close()
-    return [dict(r) for r in rows]
+    result = [dict(r) for r in rows]
+    cache_set(f"players:{season}:{game_type}:{foul_detail}", result)
+    return result
 
 
 # ---------------------------------------------------------------------------
@@ -249,6 +295,11 @@ def get_teams(
     game_type:   Optional[str] = Query(None),
     foul_detail: Optional[str] = Query(None),
 ):
+    cache_key = f"teams:{season}:{game_type}:{foul_detail}"
+    cached = cache_get(cache_key)
+    if cached:
+        return cached
+
     conn = get_conn()
     cur  = conn.cursor()
     cur.execute(f"""
@@ -267,7 +318,9 @@ def get_teams(
     rows = cur.fetchall()
     cur.close()
     conn.close()
-    return [dict(r) for r in rows]
+    result = [dict(r) for r in rows]
+    cache_set(cache_key, result)
+    return result
 
 
 # ---------------------------------------------------------------------------

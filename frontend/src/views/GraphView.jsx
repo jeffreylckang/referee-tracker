@@ -3,6 +3,16 @@ import ForceGraph from 'force-graph'
 import { fetchGraph, fetchFilters, fetchReferee, fetchPlayer } from '../api'
 import styles from './GraphView.module.css'
 
+const FOUL_LABELS = {
+  shooting:   'Shooting',
+  personal:   'Personal',
+  offensive:  'Offensive',
+  loose_ball: 'Loose Ball',
+  flagrant_1: 'Flagrant 1',
+  flagrant_2: 'Flagrant 2',
+  technical:  'Technical',
+}
+
 export default function GraphView() {
   const mountRef      = useRef(null)
   const graphRef      = useRef(null)
@@ -259,7 +269,7 @@ function RefereePanel({ data }) {
         ))}
       </Section>
       <Section title="Foul breakdown">
-        {foul_breakdown.map(f => <Row key={f.foul_detail} label={f.foul_detail} value={f.count} />)}
+        {foul_breakdown.map(f => <Row key={f.foul_detail} label={FOUL_LABELS[f.foul_detail] ?? f.foul_detail} value={f.count} />)}
       </Section>
       <Section title="Players called for the most fouls">
         {top_players.slice(0, 10).map(p => (
@@ -287,7 +297,7 @@ function PlayerPanel({ data }) {
         ))}
       </Section>
       <Section title="Foul breakdown">
-        {foul_breakdown.map(f => <Row key={f.foul_detail} label={f.foul_detail} value={f.count} />)}
+        {foul_breakdown.map(f => <Row key={f.foul_detail} label={FOUL_LABELS[f.foul_detail] ?? f.foul_detail} value={f.count} />)}
       </Section>
       <Section title="Referees who called the most fouls">
         {top_referees.slice(0, 10).map(r => (
