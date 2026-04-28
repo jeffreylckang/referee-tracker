@@ -15,7 +15,7 @@
 }
 
 .listHeader {
-  padding: 12px;
+  padding: 14px;
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -35,7 +35,7 @@
   font-weight: 500;
 }
 
-.tab     { color: var(--text-muted); }
+.tab       { color: var(--text-muted); }
 .tab:hover { background: var(--border); color: var(--text); }
 .tabActive { background: var(--accent); color: #fff; }
 
@@ -48,10 +48,11 @@
   overflow-y: auto;
 }
 
+/* Side-by-side section layout */
 .sectionRow {
   display: flex;
-  gap: 16px;
-  margin-bottom: 28px;
+  gap: 24px;
+  margin-bottom: 36px;
 }
 
 .sectionRow > * {
@@ -64,26 +65,34 @@
 .detail {
   flex: 1;
   overflow-y: auto;
-  padding: 20px 24px;
+  padding: 28px 32px;
 }
 
-.detailInner { max-width: 800px; }
+.detailInner { max-width: 860px; }
 
 .detailHeader {
   display: flex;
   align-items: center;
   gap: 12px;
-  margin-bottom: 24px;
+  margin-bottom: 32px;
 }
 
-.detailHeader h2 { font-size: 20px; font-weight: 600; }
+.detailHeader h2 {
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
 
-.sub { color: var(--text-muted); font-size: 14px; margin-top: 2px; }
+.sub {
+  color: var(--text-muted);
+  font-size: 14px;
+  margin-top: 3px;
+}
 
 .dotReferee {
   display: inline-block;
   width: 14px; height: 14px;
-  border-radius: 50%;
+  clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
   background: var(--referee);
   flex-shrink: 0;
 }
@@ -96,15 +105,18 @@
   flex-shrink: 0;
 }
 
-.section { margin-bottom: 28px; }
+/* Section — B + D: white title, thin bottom rule, no uppercase */
+.section {
+  margin-bottom: 36px;
+}
 
 .sectionTitle {
-  font-size: 11px;
+  font-size: 15px;
   font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--text-muted);
-  margin-bottom: 10px;
+  color: var(--text);
+  padding-bottom: 10px;
+  margin-bottom: 14px;
+  border-bottom: 1px solid rgba(230, 237, 243, 0.1);
 }
 
 /* Table */
@@ -120,7 +132,7 @@
   font-size: 11px;
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.05em;
   color: var(--text-muted);
   border-bottom: 1px solid var(--border);
 }
@@ -130,8 +142,8 @@
 }
 
 .table tbody td {
-  padding: 7px 10px;
-  border-bottom: 1px solid var(--border);
+  padding: 8px 10px;
+  border-bottom: 1px solid rgba(48, 54, 61, 0.7);
 }
 
 .row { cursor: pointer; }
@@ -140,7 +152,7 @@
 .selectedRow:hover td { background: rgba(249, 115, 22, 0.12); }
 .selectedRow { cursor: pointer; }
 
-.num  { font-variant-numeric: tabular-nums; text-align: right; }
+.num   { font-variant-numeric: tabular-nums; text-align: right; }
 .muted { color: var(--text-muted); }
 
 .empty {

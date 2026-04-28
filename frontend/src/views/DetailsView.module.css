@@ -26,12 +26,12 @@
 }
 
 .sectionTitle {
-  font-size: 13px;
+  font-size: 15px;
   font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--text-muted);
+  color: var(--text);
+  padding-bottom: 10px;
   margin-bottom: 14px;
+  border-bottom: 1px solid rgba(230, 237, 243, 0.1);
 }
 
 .subTitle {
