@@ -9,7 +9,7 @@ export default function App() {
   return (
     <div className={styles.shell}>
       <nav className={styles.nav}>
-        <span className={styles.logo}>Referee Tracker</span>
+        <span className={styles.logo}>NBA Referee Tracker</span>
         <div className={styles.links}>
           <NavLink to="/"          className={({ isActive }) => isActive ? styles.active : ''}>Graph</NavLink>
           <NavLink to="/dashboard" className={({ isActive }) => isActive ? styles.active : ''}>Dashboard</NavLink>

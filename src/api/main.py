@@ -29,7 +29,7 @@ from .db import get_conn
 # ---------------------------------------------------------------------------
 
 _cache: dict = {}
-CACHE_TTL = 600  # 10 minutes
+CACHE_TTL = 1800  # 30 minutes
 
 
 def cache_get(key: str):
@@ -334,6 +334,11 @@ def get_team(
     game_type:    Optional[str] = Query(None),
     foul_detail:  Optional[str] = Query(None),
 ):
+    cache_key = f"team:{team_tricode}:{season}:{game_type}:{foul_detail}"
+    cached = cache_get(cache_key)
+    if cached:
+        return cached
+
     conn = get_conn()
     cur  = conn.cursor()
 
@@ -379,7 +384,9 @@ def get_team(
 
     cur.close()
     conn.close()
-    return {"team_tricode": team_tricode, "top_referees": top_referees, "foul_breakdown": foul_breakdown}
+    result = {"team_tricode": team_tricode, "top_referees": top_referees, "foul_breakdown": foul_breakdown}
+    cache_set(cache_key, result)
+    return result
 
 
 # ---------------------------------------------------------------------------
@@ -393,6 +400,11 @@ def get_referee(
     game_type:   Optional[str] = Query(None),
     foul_detail: Optional[str] = Query(None),
 ):
+    cache_key = f"referee:{official_id}:{season}:{game_type}:{foul_detail}"
+    cached = cache_get(cache_key)
+    if cached:
+        return cached
+
     conn = get_conn()
     cur  = conn.cursor()
 
@@ -466,8 +478,10 @@ def get_referee(
 
     cur.close()
     conn.close()
-    return {"referee": dict(referee), "top_players": top_players,
-            "foul_breakdown": foul_breakdown, "period_breakdown": period_breakdown}
+    result = {"referee": dict(referee), "top_players": top_players,
+              "foul_breakdown": foul_breakdown, "period_breakdown": period_breakdown}
+    cache_set(cache_key, result)
+    return result
 
 
 # ---------------------------------------------------------------------------
@@ -481,6 +495,11 @@ def get_player(
     game_type:   Optional[str] = Query(None),
     foul_detail: Optional[str] = Query(None),
 ):
+    cache_key = f"player:{player_id}:{season}:{game_type}:{foul_detail}"
+    cached = cache_get(cache_key)
+    if cached:
+        return cached
+
     conn = get_conn()
     cur  = conn.cursor()
 
@@ -545,5 +564,7 @@ def get_player(
 
     cur.close()
     conn.close()
-    return {"player": dict(player), "top_referees": top_referees,
-            "foul_breakdown": foul_breakdown, "period_breakdown": period_breakdown}
+    result = {"player": dict(player), "top_referees": top_referees,
+              "foul_breakdown": foul_breakdown, "period_breakdown": period_breakdown}
+    cache_set(cache_key, result)
+    return result
