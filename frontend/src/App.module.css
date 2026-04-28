@@ -1,0 +1,53 @@
+.shell {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.nav {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding: 0 20px;
+  height: 48px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.logo {
+  font-weight: 600;
+  font-size: 15px;
+  color: var(--accent);
+  letter-spacing: 0.01em;
+}
+
+.links {
+  display: flex;
+  gap: 4px;
+}
+
+.links a {
+  padding: 4px 12px;
+  border-radius: 6px;
+  color: var(--text-muted);
+  font-size: 13px;
+  transition: color 0.15s, background 0.15s;
+}
+
+.links a:hover {
+  color: var(--text);
+  text-decoration: none;
+  background: var(--border);
+}
+
+.active {
+  color: var(--text) !important;
+  background: var(--border) !important;
+}
+
+.main {
+  flex: 1;
+  overflow: hidden;
+}

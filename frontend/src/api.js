@@ -1,0 +1,53 @@
+const BASE = import.meta.env.VITE_API_URL
+
+export async function fetchFilters() {
+  const r = await fetch(`${BASE}/api/filters`)
+  return r.json()
+}
+
+export async function fetchGraph({ season, foul_detail, game_type, team, min_fouls = 3 } = {}) {
+  const params = new URLSearchParams()
+  if (season)      params.set('season',      season)
+  if (foul_detail) params.set('foul_detail', foul_detail)
+  if (game_type)   params.set('game_type',   game_type)
+  if (team)        params.set('team',        team)
+  params.set('min_fouls', min_fouls)
+  const r = await fetch(`${BASE}/api/graph?${params}`)
+  return r.json()
+}
+
+export async function fetchReferees({ season, game_type, foul_detail } = {}) {
+  const params = new URLSearchParams()
+  if (season)      params.set('season',      season)
+  if (game_type)   params.set('game_type',   game_type)
+  if (foul_detail) params.set('foul_detail', foul_detail)
+  const r = await fetch(`${BASE}/api/referees?${params}`)
+  return r.json()
+}
+
+export async function fetchPlayers({ season, game_type, foul_detail } = {}) {
+  const params = new URLSearchParams()
+  if (season)      params.set('season',      season)
+  if (game_type)   params.set('game_type',   game_type)
+  if (foul_detail) params.set('foul_detail', foul_detail)
+  const r = await fetch(`${BASE}/api/players?${params}`)
+  return r.json()
+}
+
+export async function fetchReferee(id, { season, game_type, foul_detail } = {}) {
+  const params = new URLSearchParams()
+  if (season)      params.set('season',      season)
+  if (game_type)   params.set('game_type',   game_type)
+  if (foul_detail) params.set('foul_detail', foul_detail)
+  const r = await fetch(`${BASE}/api/referee/${id}?${params}`)
+  return r.json()
+}
+
+export async function fetchPlayer(id, { season, game_type, foul_detail } = {}) {
+  const params = new URLSearchParams()
+  if (season)      params.set('season',      season)
+  if (game_type)   params.set('game_type',   game_type)
+  if (foul_detail) params.set('foul_detail', foul_detail)
+  const r = await fetch(`${BASE}/api/player/${id}?${params}`)
+  return r.json()
+}
