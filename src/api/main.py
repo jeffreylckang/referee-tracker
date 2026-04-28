@@ -510,6 +510,17 @@ def get_player(
     if not player:
         raise HTTPException(status_code=404, detail="Player not found")
 
+    # Use most recent team from foul_events (players table is static at ingest time)
+    cur.execute("""
+        SELECT fouler_team_tricode FROM foul_events
+        WHERE fouler_player_id = %s AND fouler_team_tricode IS NOT NULL
+        ORDER BY game_id DESC LIMIT 1
+    """, (player_id,))
+    team_row = cur.fetchone()
+    player_dict = dict(player)
+    if team_row:
+        player_dict['team_tricode'] = team_row['fouler_team_tricode']
+
     params = {"player_id": player_id, "season": season,
               "game_type": game_type, "foul_detail": foul_detail}
 
@@ -566,7 +577,7 @@ def get_player(
 
     cur.close()
     conn.close()
-    result = {"player": dict(player), "top_referees": top_referees,
+    result = {"player": player_dict, "top_referees": top_referees,
               "foul_breakdown": foul_breakdown, "period_breakdown": period_breakdown}
     cache_set(cache_key, result)
     return result

@@ -147,14 +147,15 @@ export default function GraphView() {
         // Click same node again to deselect
         .onNodeClick(async node => {
           if (selectedNodeRef.current === node) {
-            // Deselect
+            // Deselect — clear immediately and repaint
             selectedNodeRef.current = null
             hlNodes.current.clear()
             hlLinks.current.clear()
+            graphRef.current.refresh()
             setPanel(null)
             return
           }
-          // Select: highlight this node's connections
+          // Select: update highlight refs and repaint instantly (sync)
           selectedNodeRef.current = node
           hlNodes.current.clear()
           hlLinks.current.clear()
@@ -168,7 +169,8 @@ export default function GraphView() {
               hlNodes.current.add(t)
             }
           })
-          // Open detail panel
+          graphRef.current.refresh()  // instant repaint before async fetch
+          // Load detail panel in the background
           const id = node.id.slice(2)
           if (node.type === 'referee') {
             const data = await fetchReferee(id, { season: season || undefined, game_type: gameType || undefined })
