@@ -44,6 +44,21 @@ def cache_set(key: str, data):
 
 app = FastAPI(title="Referee Tracker API")
 
+
+@app.on_event("startup")
+async def warmup_cache():
+    """Pre-warm common list queries so first Dashboard load is fast."""
+    import threading
+    def _warm():
+        try:
+            get_filters()
+            get_referees()
+            get_players()
+            get_teams()
+        except Exception:
+            pass
+    threading.Thread(target=_warm, daemon=True).start()
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -222,10 +237,10 @@ def get_referees(
             r.official_name,
             COUNT(f.official_id) AS total_fouls
         FROM referees r
-        LEFT JOIN foul_events f ON r.official_id = f.official_id
-        LEFT JOIN games g ON f.game_id = g.game_id
-        WHERE (%(season)s      IS NULL OR g.season      = %(season)s      OR g.season IS NULL)
-          AND (%(foul_detail)s IS NULL OR f.foul_detail = %(foul_detail)s OR f.foul_detail IS NULL)
+        JOIN foul_events f ON r.official_id = f.official_id
+        JOIN games g ON f.game_id = g.game_id
+        WHERE (%(season)s      IS NULL OR g.season      = %(season)s)
+          AND (%(foul_detail)s IS NULL OR f.foul_detail = %(foul_detail)s)
           {GAME_TYPE_CLAUSE}
         GROUP BY r.official_id, r.official_name
         ORDER BY total_fouls DESC
@@ -268,13 +283,14 @@ def get_players(
             p.player_id,
             p.player_name,
             lt.fouler_team_tricode AS team_tricode,
-            COUNT(f.fouler_player_id) AS total_fouls
-        FROM players p
-        LEFT JOIN latest_team lt ON lt.fouler_player_id = p.player_id
-        LEFT JOIN foul_events f ON p.player_id = f.fouler_player_id
-        LEFT JOIN games g ON f.game_id = g.game_id
-        WHERE (%(season)s      IS NULL OR g.season      = %(season)s      OR g.season IS NULL)
-          AND (%(foul_detail)s IS NULL OR f.foul_detail = %(foul_detail)s OR f.foul_detail IS NULL)
+            COUNT(*) AS total_fouls
+        FROM foul_events f
+        JOIN games g ON f.game_id = g.game_id
+        JOIN players p ON p.player_id = f.fouler_player_id
+        LEFT JOIN latest_team lt ON lt.fouler_player_id = f.fouler_player_id
+        WHERE f.fouler_player_id IS NOT NULL
+          AND (%(season)s      IS NULL OR g.season      = %(season)s)
+          AND (%(foul_detail)s IS NULL OR f.foul_detail = %(foul_detail)s)
           {GAME_TYPE_CLAUSE}
         GROUP BY p.player_id, p.player_name, lt.fouler_team_tricode
         ORDER BY total_fouls DESC

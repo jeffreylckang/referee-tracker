@@ -112,6 +112,10 @@ def init_db(db_path=None):
         CREATE INDEX IF NOT EXISTS idx_games_playoff_round
             ON games(playoff_round)
     """)
+    cur.execute("""
+        CREATE INDEX IF NOT EXISTS idx_foul_events_player_game
+            ON foul_events(fouler_player_id, game_id DESC)
+    """)
 
     conn.commit()
     cur.close()
