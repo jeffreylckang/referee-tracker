@@ -268,8 +268,9 @@ function DeviationControl({ fpg, season_trend, leagueAvg }) {
         {pct != null ? `${sign}${pct.toFixed(1)}%` : '—'}
       </span>
       <span className={styles.deviationVs}>vs</span>
+      <span className={styles.deviationComp}>{comp != null ? comp.toFixed(2) : '—'}</span>
       <select className={styles.deviationSelect} value={mode} onChange={e => setMode(e.target.value)}>
-        <option value="league">league avg — current filters</option>
+        <option value="league">league avg</option>
         <option value="career">own career avg</option>
       </select>
     </div>

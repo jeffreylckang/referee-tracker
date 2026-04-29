@@ -509,6 +509,11 @@ def get_players(
                 FROM foul_events
                 WHERE fouler_team_tricode IS NOT NULL
                 ORDER BY fouler_player_id, game_id DESC
+            ),
+            real_players AS (
+                SELECT DISTINCT fouler_player_id
+                FROM foul_events
+                WHERE foul_detail != 'technical'
             )
             SELECT p.player_id,
                    p.player_name,
@@ -516,6 +521,7 @@ def get_players(
                    COUNT(*)              AS total_fouls
             FROM foul_events f
             JOIN players p ON p.player_id = f.fouler_player_id
+            JOIN real_players rp ON rp.fouler_player_id = f.fouler_player_id
             LEFT JOIN latest_team lt ON lt.fouler_player_id = f.fouler_player_id
             WHERE f.fouler_player_id IS NOT NULL
               AND (%(foul_detail)s IS NULL OR f.foul_detail = %(foul_detail)s)
@@ -530,6 +536,11 @@ def get_players(
                 FROM foul_events
                 WHERE fouler_team_tricode IS NOT NULL
                 ORDER BY fouler_player_id, game_id DESC
+            ),
+            real_players AS (
+                SELECT DISTINCT fouler_player_id
+                FROM foul_events
+                WHERE foul_detail != 'technical'
             )
             SELECT f.fouler_player_id                AS player_id,
                    MAX(f.fouler_player_name)         AS player_name,
@@ -537,6 +548,7 @@ def get_players(
                    COUNT(*)                          AS total_fouls
             FROM foul_events f
             JOIN games g ON f.game_id = g.game_id
+            JOIN real_players rp ON rp.fouler_player_id = f.fouler_player_id
             LEFT JOIN latest_team lt ON lt.fouler_player_id = f.fouler_player_id
             WHERE f.fouler_player_id IS NOT NULL
               AND (%(season)s      IS NULL OR g.season      = %(season)s)
