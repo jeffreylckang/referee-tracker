@@ -457,23 +457,23 @@ def get_referees(
     cur  = conn.cursor()
     if not season and not game_type:
         cur.execute("""
-            SELECT official_id, official_name, COUNT(*) AS total_fouls
+            SELECT official_id, MAX(official_name) AS official_name, COUNT(*) AS total_fouls
             FROM foul_events
             WHERE official_id IS NOT NULL
               AND (%(foul_detail)s IS NULL OR foul_detail = %(foul_detail)s)
-            GROUP BY official_id, official_name
+            GROUP BY official_id
             ORDER BY total_fouls DESC
         """, {"foul_detail": foul_detail})
     else:
         cur.execute(f"""
-            SELECT r.official_id, r.official_name, COUNT(f.official_id) AS total_fouls
-            FROM referees r
-            JOIN foul_events f ON r.official_id = f.official_id
+            SELECT f.official_id, MAX(f.official_name) AS official_name, COUNT(*) AS total_fouls
+            FROM foul_events f
             JOIN games g ON f.game_id = g.game_id
-            WHERE (%(season)s      IS NULL OR g.season      = %(season)s)
+            WHERE f.official_id IS NOT NULL
+              AND (%(season)s      IS NULL OR g.season      = %(season)s)
               AND (%(foul_detail)s IS NULL OR f.foul_detail = %(foul_detail)s)
               {GAME_TYPE_CLAUSE}
-            GROUP BY r.official_id, r.official_name
+            GROUP BY f.official_id
             ORDER BY total_fouls DESC
         """, {"season": season, "game_type": game_type, "foul_detail": foul_detail})
     rows = cur.fetchall()
