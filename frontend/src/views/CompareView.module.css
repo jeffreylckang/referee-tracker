@@ -23,7 +23,7 @@
 .tab, .tabActive {
   padding: 5px 14px;
   border-radius: 6px;
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 500;
 }
 
@@ -68,7 +68,7 @@
 
 .dropdownItem {
   padding: 8px 12px;
-  font-size: 14px;
+  font-size: 15px;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -120,7 +120,7 @@
   align-items: center;
   justify-content: center;
   color: var(--text-muted);
-  font-size: 14px;
+  font-size: 15px;
 }
 
 /* Card header */
@@ -132,13 +132,13 @@
 }
 
 .cardHeader h2 {
-  font-size: 22px;
+  font-size: 24px;
   font-weight: 600;
   letter-spacing: -0.01em;
 }
 
 .totalFouls {
-  font-size: 14px;
+  font-size: 15px;
   color: var(--text-muted);
   margin-top: 3px;
   display: flex;
@@ -155,7 +155,7 @@
 }
 
 .cardMeta {
-  font-size: 13px;
+  font-size: 14px;
   color: var(--text-muted);
   font-variant-numeric: tabular-nums;
 }
@@ -181,7 +181,7 @@
 .section { margin-bottom: 36px; }
 
 .sectionTitle {
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 600;
   color: var(--text);
   padding-bottom: 10px;
@@ -193,13 +193,13 @@
 .table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 14px;
+  font-size: 15px;
 }
 
 .table thead th {
   text-align: left;
   padding: 6px 10px;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -228,7 +228,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-size: 14px;
+  font-size: 15px;
   padding: 8px 0;
   border-bottom: 1px solid rgba(48, 54, 61, 0.7);
 }
@@ -236,5 +236,5 @@
 .relCount {
   color: var(--text-muted);
   font-variant-numeric: tabular-nums;
-  font-size: 13px;
+  font-size: 14px;
 }

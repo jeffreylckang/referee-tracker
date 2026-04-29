@@ -194,6 +194,28 @@ def get_summary(
         agg = cur.fetchone()
 
         cur.execute(f"""
+            WITH player_game AS (
+                SELECT fouler_player_id, game_id, COUNT(*) AS fouls
+                FROM foul_events
+                WHERE fouler_player_id IS NOT NULL {fd_filter}
+                GROUP BY fouler_player_id, game_id
+            )
+            SELECT ROUND(AVG(fouls)::numeric, 2) AS avg_fpg FROM player_game
+        """, p)
+        player_agg = cur.fetchone()
+
+        cur.execute(f"""
+            WITH team_game AS (
+                SELECT fouler_team_tricode, game_id, COUNT(*) AS fouls
+                FROM foul_events
+                WHERE fouler_team_tricode IS NOT NULL {fd_filter}
+                GROUP BY fouler_team_tricode, game_id
+            )
+            SELECT ROUND(AVG(fouls)::numeric, 2) AS avg_fpg FROM team_game
+        """, p)
+        team_agg = cur.fetchone()
+
+        cur.execute(f"""
             SELECT official_id, official_name,
                    COUNT(*) AS total_fouls,
                    COUNT(DISTINCT game_id) AS games_worked,
@@ -263,6 +285,34 @@ def get_summary(
         agg = cur.fetchone()
 
         cur.execute(f"""
+            WITH player_game AS (
+                SELECT f.fouler_player_id, f.game_id, COUNT(*) AS fouls
+                FROM foul_events f
+                JOIN games g ON g.game_id = f.game_id
+                WHERE f.fouler_player_id IS NOT NULL
+                  AND (%(season)s IS NULL OR g.season = %(season)s)
+                  {gt_clause} {fd_filter}
+                GROUP BY f.fouler_player_id, f.game_id
+            )
+            SELECT ROUND(AVG(fouls)::numeric, 2) AS avg_fpg FROM player_game
+        """, p)
+        player_agg = cur.fetchone()
+
+        cur.execute(f"""
+            WITH team_game AS (
+                SELECT f.fouler_team_tricode, f.game_id, COUNT(*) AS fouls
+                FROM foul_events f
+                JOIN games g ON g.game_id = f.game_id
+                WHERE f.fouler_team_tricode IS NOT NULL
+                  AND (%(season)s IS NULL OR g.season = %(season)s)
+                  {gt_clause} {fd_filter}
+                GROUP BY f.fouler_team_tricode, f.game_id
+            )
+            SELECT ROUND(AVG(fouls)::numeric, 2) AS avg_fpg FROM team_game
+        """, p)
+        team_agg = cur.fetchone()
+
+        cur.execute(f"""
             SELECT f.official_id, f.official_name,
                    COUNT(*) AS total_fouls,
                    COUNT(DISTINCT f.game_id) AS games_worked,
@@ -311,6 +361,8 @@ def get_summary(
         "total_refs":          total_refs,
         "avg_fouls_per_game":  float(agg["avg_fpg"]) if agg["avg_fpg"] else None,
         "median_fouls_per_game": float(agg["med_fpg"]) if agg["med_fpg"] else None,
+        "avg_player_fpg":      float(player_agg["avg_fpg"]) if player_agg and player_agg["avg_fpg"] else None,
+        "avg_team_fpg":        float(team_agg["avg_fpg"])   if team_agg   and team_agg["avg_fpg"]   else None,
         "most_active_ref":     top_ref,
         "most_fouled_player":  top_player,
         "most_penalized_team": top_team,

@@ -39,9 +39,7 @@ export default function DashboardView() {
   const [search,     setSearch]     = useState('')
   const [detail,     setDetail]     = useState(null)
   const [loading,    setLoading]    = useState(true)
-  const [summary,          setSummary]          = useState(null)
-  const [summaryAllTime,   setSummaryAllTime]   = useState(null)
-  const [summaryPlayoffs,  setSummaryPlayoffs]  = useState(null)
+  const [summary, setSummary] = useState(null)
 
   useEffect(() => {
     fetchFilters().then(f => setFilters(f))
@@ -51,10 +49,7 @@ export default function DashboardView() {
     setLoading(true)
     setDetail(null)
     const opts = { season: season || undefined, game_type: gameType || undefined, foul_detail: foulDetail || undefined }
-    const fd = foulDetail || undefined
     fetchSummary(opts).then(setSummary)
-    fetchSummary({ foul_detail: fd }).then(setSummaryAllTime)
-    fetchSummary({ game_type: 'playoff', foul_detail: fd }).then(setSummaryPlayoffs)
     Promise.all([fetchReferees(opts), fetchPlayers(opts), fetchTeams(opts)]).then(([r, p, t]) => {
       setReferees(r)
       setPlayers(p)
@@ -173,11 +168,11 @@ export default function DashboardView() {
           {!detail ? (
             <div className={styles.empty}>Select a {tab === 'referees' ? 'referee' : tab === 'players' ? 'player' : 'team'} to see details</div>
           ) : detail.type === 'referee' ? (
-            <RefereeDetail data={detail.data} season={season} summary={summary} summaryAllTime={summaryAllTime} summaryPlayoffs={summaryPlayoffs} />
+            <RefereeDetail data={detail.data} season={season} summary={summary} />
           ) : detail.type === 'player' ? (
-            <PlayerDetail data={detail.data} season={season} summary={summary} summaryAllTime={summaryAllTime} summaryPlayoffs={summaryPlayoffs} />
+            <PlayerDetail data={detail.data} season={season} summary={summary} />
           ) : (
-            <TeamDetail data={detail.data} season={season} summary={summary} summaryAllTime={summaryAllTime} summaryPlayoffs={summaryPlayoffs} />
+            <TeamDetail data={detail.data} season={season} summary={summary} />
           )}
         </div>
       </div>
@@ -251,8 +246,8 @@ function LeaderCard({ accent, label, name, sub }) {
   )
 }
 
-function DeviationControl({ fpg, season_trend, summary, summaryAllTime, summaryPlayoffs }) {
-  const [mode, setMode] = useState('filtered')
+function DeviationControl({ fpg, season_trend, leagueAvg }) {
+  const [mode, setMode] = useState('league')
 
   const careerFpg = useMemo(() => {
     if (!season_trend?.length) return null
@@ -261,14 +256,8 @@ function DeviationControl({ fpg, season_trend, summary, summaryAllTime, summaryP
     return totalGames > 0 ? totalFouls / totalGames : null
   }, [season_trend])
 
-  const compMap = {
-    filtered: summary?.avg_fouls_per_game,
-    all_time: summaryAllTime?.avg_fouls_per_game,
-    playoffs: summaryPlayoffs?.avg_fouls_per_game,
-    career:   careerFpg,
-  }
-  const comp = compMap[mode]
-  const pct  = comp && fpg != null ? (fpg - comp) / comp * 100 : null
+  const comp  = mode === 'league' ? leagueAvg : careerFpg
+  const pct   = comp && fpg != null ? (fpg - comp) / comp * 100 : null
   const sign  = pct >= 0 ? '+' : ''
   const color = pct > 2 ? 'var(--referee)' : pct < -2 ? 'var(--player)' : 'var(--text-muted)'
 
@@ -280,9 +269,7 @@ function DeviationControl({ fpg, season_trend, summary, summaryAllTime, summaryP
       </span>
       <span className={styles.deviationVs}>vs</span>
       <select className={styles.deviationSelect} value={mode} onChange={e => setMode(e.target.value)}>
-        <option value="filtered">league avg — current filters</option>
-        <option value="all_time">league avg — all seasons</option>
-        <option value="playoffs">league avg — playoffs only</option>
+        <option value="league">league avg — current filters</option>
         <option value="career">own career avg</option>
       </select>
     </div>
@@ -387,7 +374,7 @@ function FoulTable({ foul_breakdown }) {
   )
 }
 
-function RefereeDetail({ data, season, summary, summaryAllTime, summaryPlayoffs }) {
+function RefereeDetail({ data, season, summary }) {
   const { referee, top_players, foul_breakdown, period_breakdown, season_trend, fouls_per_game } = data
 
   return (
@@ -399,7 +386,7 @@ function RefereeDetail({ data, season, summary, summaryAllTime, summaryPlayoffs 
           {season && <p className={styles.sub}>{season}</p>}
         </div>
       </div>
-      <DeviationControl fpg={fouls_per_game} season_trend={season_trend} summary={summary} summaryAllTime={summaryAllTime} summaryPlayoffs={summaryPlayoffs} />
+      <DeviationControl fpg={fouls_per_game} season_trend={season_trend} leagueAvg={summary?.avg_fouls_per_game} />
 
       <div className={styles.sectionRow}>
         <Section title="Foul breakdown"><FoulTable foul_breakdown={foul_breakdown} /></Section>
@@ -451,7 +438,7 @@ function RefereeDetail({ data, season, summary, summaryAllTime, summaryPlayoffs 
   )
 }
 
-function PlayerDetail({ data, season, summary, summaryAllTime, summaryPlayoffs }) {
+function PlayerDetail({ data, season, summary }) {
   const { player, top_referees, foul_breakdown, period_breakdown, season_trend, fouls_per_game } = data
 
   return (
@@ -463,7 +450,7 @@ function PlayerDetail({ data, season, summary, summaryAllTime, summaryPlayoffs }
           <p className={styles.sub}>{[player.team_tricode, season].filter(Boolean).join(' · ')}</p>
         </div>
       </div>
-      <DeviationControl fpg={fouls_per_game} season_trend={season_trend} summary={summary} summaryAllTime={summaryAllTime} summaryPlayoffs={summaryPlayoffs} />
+      <DeviationControl fpg={fouls_per_game} season_trend={season_trend} leagueAvg={summary?.avg_player_fpg} />
 
       <div className={styles.sectionRow}>
         <Section title="Foul breakdown"><FoulTable foul_breakdown={foul_breakdown} /></Section>
@@ -514,7 +501,7 @@ function PlayerDetail({ data, season, summary, summaryAllTime, summaryPlayoffs }
   )
 }
 
-function TeamDetail({ data, season, summary, summaryAllTime, summaryPlayoffs }) {
+function TeamDetail({ data, season, summary }) {
   const { team_tricode, top_referees, foul_breakdown, season_trend, fouls_per_game } = data
 
   return (
@@ -526,7 +513,7 @@ function TeamDetail({ data, season, summary, summaryAllTime, summaryPlayoffs }) 
           <p className={styles.sub}>{[team_tricode, season].filter(Boolean).join(' · ')}</p>
         </div>
       </div>
-      <DeviationControl fpg={fouls_per_game} season_trend={season_trend} summary={summary} summaryAllTime={summaryAllTime} summaryPlayoffs={summaryPlayoffs} />
+      <DeviationControl fpg={fouls_per_game} season_trend={season_trend} leagueAvg={summary?.avg_team_fpg} />
 
       <Section title="Foul breakdown"><FoulTable foul_breakdown={foul_breakdown} /></Section>
 

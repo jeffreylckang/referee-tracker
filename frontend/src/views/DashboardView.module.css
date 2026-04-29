@@ -108,7 +108,7 @@
 }
 
 .bannerStatLabel {
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -138,7 +138,7 @@
 }
 
 .leaderLabel {
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.07em;
@@ -152,7 +152,7 @@
 }
 
 .leaderSub {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--text-muted);
   font-variant-numeric: tabular-nums;
 }
@@ -166,7 +166,7 @@
   padding: 7px 36px;
   border-bottom: 1px solid var(--border);
   background: var(--surface);
-  font-size: 14px;
+  font-size: 15px;
   color: var(--text-muted);
   font-variant-numeric: tabular-nums;
   cursor: pointer;
@@ -178,7 +178,7 @@
 }
 
 .bannerChip {
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.07em;
@@ -262,7 +262,7 @@
 .table thead th {
   text-align: left;
   padding: 7px 10px;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -311,12 +311,12 @@
 }
 
 .deviationVs {
-  font-size: 14px;
+  font-size: 15px;
   color: var(--text-muted);
 }
 
 .deviationSelect {
-  font-size: 14px;
+  font-size: 15px;
   padding: 4px 8px;
   background: var(--surface);
   color: var(--text);
@@ -327,7 +327,7 @@
 
 /* ─── Season bar chart ─── */
 .chartNote {
-  font-size: 13px;
+  font-size: 14px;
   color: var(--text-muted);
   margin-bottom: 14px;
   line-height: 1.5;
@@ -361,7 +361,7 @@
 }
 
 .chartBarVal {
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 600;
   color: var(--text-muted);
   font-variant-numeric: tabular-nums;
@@ -381,7 +381,7 @@
 }
 
 .chartLabel {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--text-muted);
   text-align: center;
   margin-top: 5px;
