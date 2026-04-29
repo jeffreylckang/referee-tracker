@@ -315,13 +315,6 @@
   color: var(--text-muted);
 }
 
-.deviationComp {
-  font-size: 17px;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-  letter-spacing: -0.02em;
-  color: var(--text-muted);
-}
 
 .deviationSelect {
   font-size: 15px;

@@ -264,15 +264,15 @@ function DeviationControl({ fpg, season_trend, leagueAvg }) {
   return (
     <div className={styles.deviationRow}>
       <span className={styles.deviationFpg}>{fpg != null ? `${fpg} fouls/game` : '—'}</span>
-      <span className={styles.deviationBadge} style={{ color }}>
-        {pct != null ? `${sign}${pct.toFixed(1)}%` : '—'}
-      </span>
       <span className={styles.deviationVs}>vs</span>
-      <span className={styles.deviationComp}>{comp != null ? comp.toFixed(2) : '—'}</span>
+      <span className={styles.deviationFpg}>{comp != null ? `${comp.toFixed(2)} fouls/game` : '—'}</span>
       <select className={styles.deviationSelect} value={mode} onChange={e => setMode(e.target.value)}>
         <option value="league">league avg</option>
         <option value="career">own career avg</option>
       </select>
+      <span className={styles.deviationBadge} style={{ color }}>
+        {pct != null ? `${sign}${pct.toFixed(1)}%` : '—'}
+      </span>
     </div>
   )
 }
