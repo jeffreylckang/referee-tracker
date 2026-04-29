@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react'
-import { fetchReferees, fetchPlayers, fetchTeams, fetchFilters, fetchReferee, fetchPlayer, fetchTeam } from '../api'
+import { useEffect, useState, useMemo } from 'react'
+import { fetchReferees, fetchPlayers, fetchTeams, fetchFilters, fetchReferee, fetchPlayer, fetchTeam, fetchSummary } from '../api'
 import styles from './DashboardView.module.css'
 
 const TEAM_NAMES = {
@@ -39,6 +39,9 @@ export default function DashboardView() {
   const [search,     setSearch]     = useState('')
   const [detail,     setDetail]     = useState(null)
   const [loading,    setLoading]    = useState(true)
+  const [summary,          setSummary]          = useState(null)
+  const [summaryAllTime,   setSummaryAllTime]   = useState(null)
+  const [summaryPlayoffs,  setSummaryPlayoffs]  = useState(null)
 
   useEffect(() => {
     fetchFilters().then(f => setFilters(f))
@@ -48,6 +51,10 @@ export default function DashboardView() {
     setLoading(true)
     setDetail(null)
     const opts = { season: season || undefined, game_type: gameType || undefined, foul_detail: foulDetail || undefined }
+    const fd = foulDetail || undefined
+    fetchSummary(opts).then(setSummary)
+    fetchSummary({ foul_detail: fd }).then(setSummaryAllTime)
+    fetchSummary({ game_type: 'playoff', foul_detail: fd }).then(setSummaryPlayoffs)
     Promise.all([fetchReferees(opts), fetchPlayers(opts), fetchTeams(opts)]).then(([r, p, t]) => {
       setReferees(r)
       setPlayers(p)
@@ -87,9 +94,9 @@ export default function DashboardView() {
       <div className={styles.list}>
         <div className={styles.listHeader}>
           <div className={styles.tabs}>
-            <button className={tab === 'referees' ? styles.tabActive : styles.tab} onClick={() => { setTab('referees'); setDetail(null) }}>Referees</button>
-            <button className={tab === 'players'  ? styles.tabActive : styles.tab} onClick={() => { setTab('players');  setDetail(null) }}>Players</button>
-            <button className={tab === 'teams'    ? styles.tabActive : styles.tab} onClick={() => { setTab('teams');    setDetail(null) }}>Teams</button>
+            <button className={tab === 'referees' ? styles.tabActive : styles.tab} style={tab === 'referees' ? { background: 'var(--referee)', color: '#fff' } : {}} onClick={() => { setTab('referees'); setDetail(null) }}>Referees</button>
+            <button className={tab === 'players'  ? styles.tabActive : styles.tab} style={tab === 'players'  ? { background: 'var(--player)',  color: '#fff' } : {}} onClick={() => { setTab('players');  setDetail(null) }}>Players</button>
+            <button className={tab === 'teams'    ? styles.tabActive : styles.tab} style={tab === 'teams'    ? { background: 'rgba(100,116,139,0.85)', color: '#fff' } : {}} onClick={() => { setTab('teams');    setDetail(null) }}>Teams</button>
           </div>
           <input
             placeholder={`Search ${tab}…`}
@@ -159,19 +166,187 @@ export default function DashboardView() {
         </div>
       </div>
 
-      {/* Right: detail */}
+      {/* Right: banner + detail */}
       <div className={styles.detail}>
-        {!detail ? (
-          <div className={styles.empty}>Select a {tab === 'referees' ? 'referee' : tab === 'players' ? 'player' : 'team'} to see details</div>
-        ) : detail.type === 'referee' ? (
-          <RefereeDetail data={detail.data} season={season} />
-        ) : detail.type === 'player' ? (
-          <PlayerDetail data={detail.data} season={season} />
-        ) : (
-          <TeamDetail data={detail.data} season={season} />
+        <LeagueBanner summary={summary} collapsed={!!detail} onExpand={() => setDetail(null)} />
+        <div className={styles.detailScroll}>
+          {!detail ? (
+            <div className={styles.empty}>Select a {tab === 'referees' ? 'referee' : tab === 'players' ? 'player' : 'team'} to see details</div>
+          ) : detail.type === 'referee' ? (
+            <RefereeDetail data={detail.data} season={season} summary={summary} summaryAllTime={summaryAllTime} summaryPlayoffs={summaryPlayoffs} />
+          ) : detail.type === 'player' ? (
+            <PlayerDetail data={detail.data} season={season} summary={summary} summaryAllTime={summaryAllTime} summaryPlayoffs={summaryPlayoffs} />
+          ) : (
+            <TeamDetail data={detail.data} season={season} summary={summary} summaryAllTime={summaryAllTime} summaryPlayoffs={summaryPlayoffs} />
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function LeagueBanner({ summary, collapsed, onExpand }) {
+  if (!summary) return null
+  const { total_fouls, total_games, total_refs, avg_fouls_per_game, median_fouls_per_game,
+          most_active_ref, most_fouled_player, most_penalized_team } = summary
+
+  if (collapsed) {
+    return (
+      <div className={styles.bannerCollapsed} onClick={onExpand} title="Click to expand league stats">
+        <span className={styles.bannerChip}>League</span>
+        <span>Avg {avg_fouls_per_game} fouls/game</span>
+        <span className={styles.bannerSep}>·</span>
+        <span>Median {median_fouls_per_game} fouls/game</span>
+        <span className={styles.bannerExpandHint}>↑ expand</span>
+      </div>
+    )
+  }
+
+  return (
+    <div className={styles.banner}>
+      <div className={styles.bannerStatRow}>
+        <BannerStat label="Total fouls"       value={total_fouls?.toLocaleString()} />
+        <BannerStat label="Games"             value={total_games?.toLocaleString()} />
+        <BannerStat label="Active refs"       value={total_refs?.toLocaleString()} />
+        <BannerStat label="Avg fouls/game"    value={avg_fouls_per_game} />
+        <BannerStat label="Median fouls/game" value={median_fouls_per_game} />
+      </div>
+      <div className={styles.bannerLeaderRow}>
+        {most_active_ref && (
+          <LeaderCard accent="var(--referee)" label="Most active ref"
+            name={most_active_ref.official_name}
+            sub={`${most_active_ref.total_fouls?.toLocaleString()} fouls · ${most_active_ref.games_worked} games`} />
+        )}
+        {most_fouled_player && (
+          <LeaderCard accent="var(--player)" label="Most fouled player"
+            name={most_fouled_player.player_name}
+            sub={`${most_fouled_player.total_fouls?.toLocaleString()} fouls`} />
+        )}
+        {most_penalized_team && (
+          <LeaderCard accent="rgba(100,116,139,0.7)" label="Most penalized team"
+            name={TEAM_NAMES[most_penalized_team.team_tricode] ?? most_penalized_team.team_tricode}
+            sub={`${most_penalized_team.total_fouls?.toLocaleString()} fouls`} />
         )}
       </div>
     </div>
+  )
+}
+
+function BannerStat({ label, value }) {
+  return (
+    <div className={styles.bannerStat}>
+      <div className={styles.bannerStatVal}>{value ?? '—'}</div>
+      <div className={styles.bannerStatLabel}>{label}</div>
+    </div>
+  )
+}
+
+function LeaderCard({ accent, label, name, sub }) {
+  return (
+    <div className={styles.leaderCard} style={{ borderLeftColor: accent }}>
+      <span className={styles.leaderLabel} style={{ color: accent }}>{label}</span>
+      <span className={styles.leaderName}>{name}</span>
+      <span className={styles.leaderSub}>{sub}</span>
+    </div>
+  )
+}
+
+function DeviationControl({ fpg, season_trend, summary, summaryAllTime, summaryPlayoffs }) {
+  const [mode, setMode] = useState('filtered')
+
+  const careerFpg = useMemo(() => {
+    if (!season_trend?.length) return null
+    const totalFouls = season_trend.reduce((s, r) => s + (r.total_fouls || 0), 0)
+    const totalGames = season_trend.reduce((s, r) => s + (r.games_worked || r.games_played || 0), 0)
+    return totalGames > 0 ? totalFouls / totalGames : null
+  }, [season_trend])
+
+  const compMap = {
+    filtered: summary?.avg_fouls_per_game,
+    all_time: summaryAllTime?.avg_fouls_per_game,
+    playoffs: summaryPlayoffs?.avg_fouls_per_game,
+    career:   careerFpg,
+  }
+  const comp = compMap[mode]
+  const pct  = comp && fpg != null ? (fpg - comp) / comp * 100 : null
+  const sign  = pct >= 0 ? '+' : ''
+  const color = pct > 2 ? 'var(--referee)' : pct < -2 ? 'var(--player)' : 'var(--text-muted)'
+
+  return (
+    <div className={styles.deviationRow}>
+      <span className={styles.deviationFpg}>{fpg != null ? `${fpg} fouls/game` : '—'}</span>
+      <span className={styles.deviationBadge} style={{ color }}>
+        {pct != null ? `${sign}${pct.toFixed(1)}%` : '—'}
+      </span>
+      <span className={styles.deviationVs}>vs</span>
+      <select className={styles.deviationSelect} value={mode} onChange={e => setMode(e.target.value)}>
+        <option value="filtered">league avg — current filters</option>
+        <option value="all_time">league avg — all seasons</option>
+        <option value="playoffs">league avg — playoffs only</option>
+        <option value="career">own career avg</option>
+      </select>
+    </div>
+  )
+}
+
+function WeightedTable({ items, nameKey, idKey }) {
+  if (!items?.length) return null
+  const MIN_SHARED = 3
+  const sorted = [...items]
+    .filter(r => (r.games_shared || 0) >= MIN_SHARED)
+    .map(r => ({ ...r, rate: r.games_shared > 0 ? r.total_fouls / r.games_shared : 0 }))
+    .sort((a, b) => b.rate - a.rate)
+    .slice(0, 10)
+  if (!sorted.length) return null
+  return (
+    <table className={styles.table}>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th className={styles.num}>Fouls</th>
+          <th className={styles.num}>Shared games</th>
+          <th className={styles.num}>Per game</th>
+        </tr>
+      </thead>
+      <tbody>
+        {sorted.map(r => (
+          <tr key={r[idKey]}>
+            <td>{r[nameKey]}</td>
+            <td className={styles.num}>{r.total_fouls}</td>
+            <td className={styles.num}>{r.games_shared}</td>
+            <td className={styles.num}>{r.rate.toFixed(2)}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  )
+}
+
+function SeasonChart({ season_trend, note }) {
+  if (!season_trend?.length) return null
+  const max = Math.max(...season_trend.map(s => parseFloat(s.fouls_per_game) || 0))
+  if (!max) return null
+  return (
+    <>
+      {note && <p className={styles.chartNote}>{note}</p>}
+      <div className={styles.chartWrap}>
+        {season_trend.map(s => {
+          const val = parseFloat(s.fouls_per_game) || 0
+          const pct = max > 0 ? (val / max) * 100 : 0
+          const label = s.season?.slice(2).replace('-', '–') ?? s.season
+          const games = s.games_worked ?? s.games_played
+          return (
+            <div key={s.season} className={styles.chartCol} title={`${s.season}: ${val} fouls/game (${games} games)`}>
+              <div className={styles.chartBarWrap}>
+                <div className={styles.chartBarVal}>{val.toFixed(1)}</div>
+                <div className={styles.chartBar} style={{ height: `${pct}%` }} />
+              </div>
+              <div className={styles.chartLabel}>{label}</div>
+            </div>
+          )
+        })}
+      </div>
+    </>
   )
 }
 
@@ -212,8 +387,8 @@ function FoulTable({ foul_breakdown }) {
   )
 }
 
-function RefereeDetail({ data, season }) {
-  const { referee, top_players, foul_breakdown, period_breakdown } = data
+function RefereeDetail({ data, season, summary, summaryAllTime, summaryPlayoffs }) {
+  const { referee, top_players, foul_breakdown, period_breakdown, season_trend, fouls_per_game } = data
 
   return (
     <div className={styles.detailInner}>
@@ -224,6 +399,7 @@ function RefereeDetail({ data, season }) {
           {season && <p className={styles.sub}>{season}</p>}
         </div>
       </div>
+      <DeviationControl fpg={fouls_per_game} season_trend={season_trend} summary={summary} summaryAllTime={summaryAllTime} summaryPlayoffs={summaryPlayoffs} />
 
       <div className={styles.sectionRow}>
         <Section title="Foul breakdown"><FoulTable foul_breakdown={foul_breakdown} /></Section>
@@ -231,6 +407,12 @@ function RefereeDetail({ data, season }) {
           <Section title="By quarter"><PeriodTable period_breakdown={period_breakdown} /></Section>
         )}
       </div>
+
+      {season_trend?.length > 1 && (
+        <Section title="Fouls called per game officiated, by season">
+          <SeasonChart season_trend={season_trend} note="Fouls this referee called divided by the number of games they officiated that season." />
+        </Section>
+      )}
 
       <Section title="Players called for the most fouls by this referee">
         <table className={styles.table}>
@@ -269,8 +451,8 @@ function RefereeDetail({ data, season }) {
   )
 }
 
-function PlayerDetail({ data, season }) {
-  const { player, top_referees, foul_breakdown, period_breakdown } = data
+function PlayerDetail({ data, season, summary, summaryAllTime, summaryPlayoffs }) {
+  const { player, top_referees, foul_breakdown, period_breakdown, season_trend, fouls_per_game } = data
 
   return (
     <div className={styles.detailInner}>
@@ -281,6 +463,7 @@ function PlayerDetail({ data, season }) {
           <p className={styles.sub}>{[player.team_tricode, season].filter(Boolean).join(' · ')}</p>
         </div>
       </div>
+      <DeviationControl fpg={fouls_per_game} season_trend={season_trend} summary={summary} summaryAllTime={summaryAllTime} summaryPlayoffs={summaryPlayoffs} />
 
       <div className={styles.sectionRow}>
         <Section title="Foul breakdown"><FoulTable foul_breakdown={foul_breakdown} /></Section>
@@ -288,6 +471,12 @@ function PlayerDetail({ data, season }) {
           <Section title="By quarter"><PeriodTable period_breakdown={period_breakdown} /></Section>
         )}
       </div>
+
+      {season_trend?.length > 1 && (
+        <Section title="Fouls called per game, by season">
+          <SeasonChart season_trend={season_trend} note="Fouls called on this player divided by games they appeared in foul data that season." />
+        </Section>
+      )}
 
       <Section title="Referees who called the most fouls on this player">
         <table className={styles.table}>
@@ -325,8 +514,8 @@ function PlayerDetail({ data, season }) {
   )
 }
 
-function TeamDetail({ data, season }) {
-  const { team_tricode, top_referees, foul_breakdown } = data
+function TeamDetail({ data, season, summary, summaryAllTime, summaryPlayoffs }) {
+  const { team_tricode, top_referees, foul_breakdown, season_trend, fouls_per_game } = data
 
   return (
     <div className={styles.detailInner}>
@@ -337,8 +526,15 @@ function TeamDetail({ data, season }) {
           <p className={styles.sub}>{[team_tricode, season].filter(Boolean).join(' · ')}</p>
         </div>
       </div>
+      <DeviationControl fpg={fouls_per_game} season_trend={season_trend} summary={summary} summaryAllTime={summaryAllTime} summaryPlayoffs={summaryPlayoffs} />
 
       <Section title="Foul breakdown"><FoulTable foul_breakdown={foul_breakdown} /></Section>
+
+      {season_trend?.length > 1 && (
+        <Section title="Fouls called per game, by season">
+          <SeasonChart season_trend={season_trend} note="Fouls called on this team divided by games they appeared in foul data that season." />
+        </Section>
+      )}
 
       <Section title="Referees who called the most fouls on this team">
         <table className={styles.table}>

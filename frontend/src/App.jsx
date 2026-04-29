@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { Routes, Route, NavLink } from 'react-router-dom'
 import GraphView from './views/GraphView'
 import DashboardView from './views/DashboardView'
@@ -5,7 +6,12 @@ import CompareView from './views/CompareView'
 import DetailsView from './views/DetailsView'
 import styles from './App.module.css'
 
+const BASE = import.meta.env.VITE_API_URL
+
 export default function App() {
+  // Wake up the Render server on first load so it's warm by the time the user reaches Dashboard
+  useEffect(() => { fetch(`${BASE}/api/filters`).catch(() => {}) }, [])
+
   return (
     <div className={styles.shell}>
       <nav className={styles.nav}>

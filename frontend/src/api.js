@@ -5,6 +5,15 @@ export async function fetchStats() {
   return r.json()
 }
 
+export async function fetchSummary({ season, game_type, foul_detail } = {}) {
+  const params = new URLSearchParams()
+  if (season)      params.set('season',      season)
+  if (game_type)   params.set('game_type',   game_type)
+  if (foul_detail) params.set('foul_detail', foul_detail)
+  const r = await fetch(`${BASE}/api/summary?${params}`)
+  return r.json()
+}
+
 export async function fetchFilters() {
   const r = await fetch(`${BASE}/api/filters`)
   return r.json()

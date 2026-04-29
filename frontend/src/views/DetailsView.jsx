@@ -85,6 +85,16 @@ export default function DetailsView() {
         )}
 
         <section className={styles.section}>
+          <h2 className={styles.sectionTitle}>Limitations</h2>
+          <p className={styles.lead}>
+            This data tracks foul calls, but the nature of a foul call is two-sided. A player who appears
+            frequently in the data could be there because they genuinely foul a lot, because certain referees
+            tend to call fouls on them more often, or both. High foul counts tell you a player was called often —
+            they don't tell you whether that's driven by how the player plays or by how referees see them.
+          </p>
+        </section>
+
+        <section className={styles.section}>
           <h2 className={styles.sectionTitle}>What a Foul Event Looks Like</h2>
           <p className={styles.lead}>Each row in the database represents a single foul call and contains:</p>
           <table className={styles.table}>

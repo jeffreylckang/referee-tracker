@@ -216,7 +216,7 @@ function Picker({ list, type, search, setSearch, selected, onSelect }) {
 
 function EntityCard({ type, data }) {
   if (type === 'referees') {
-    const { referee, top_players, foul_breakdown, period_breakdown } = data
+    const { referee, top_players, foul_breakdown, period_breakdown, games_worked, fouls_per_game } = data
     const total = foul_breakdown.reduce((s, f) => s + f.count, 0)
     return (
       <div>
@@ -224,14 +224,18 @@ function EntityCard({ type, data }) {
           <span className={styles.dotReferee} />
           <div>
             <h2>{referee.official_name}</h2>
-            <p className={styles.totalFouls}>{total.toLocaleString()} fouls</p>
+            <p className={styles.totalFouls}>
+              {total.toLocaleString()} fouls
+              {games_worked != null && <span className={styles.cardMeta}> · {games_worked} games worked</span>}
+              {fouls_per_game != null && <span className={styles.cardMeta}> · {fouls_per_game} fouls per game</span>}
+            </p>
           </div>
         </div>
         <Section title="Foul breakdown"><FoulTable rows={foul_breakdown} /></Section>
         {period_breakdown?.length > 0 && (
           <Section title="By quarter"><PeriodTable rows={period_breakdown} /></Section>
         )}
-        <Section title="Top players">
+        <Section title="Players called for the most fouls by this referee">
           <RelList items={top_players.slice(0, 3)} nameKey="fouler_player_name" sub="fouler_team_tricode" />
         </Section>
       </div>
@@ -239,7 +243,7 @@ function EntityCard({ type, data }) {
   }
 
   if (type === 'players') {
-    const { player, top_referees, foul_breakdown, period_breakdown } = data
+    const { player, top_referees, foul_breakdown, period_breakdown, games_played, fouls_per_game } = data
     const total = foul_breakdown.reduce((s, f) => s + f.count, 0)
     return (
       <div>
@@ -250,6 +254,8 @@ function EntityCard({ type, data }) {
             <p className={styles.totalFouls}>
               {total.toLocaleString()} fouls
               {player.team_tricode && <span className={styles.teamBadge}>{player.team_tricode}</span>}
+              {games_played != null && <span className={styles.cardMeta}> · {games_played} games</span>}
+              {fouls_per_game != null && <span className={styles.cardMeta}> · {fouls_per_game} fouls per game</span>}
             </p>
           </div>
         </div>
@@ -257,7 +263,7 @@ function EntityCard({ type, data }) {
         {period_breakdown?.length > 0 && (
           <Section title="By quarter"><PeriodTable rows={period_breakdown} /></Section>
         )}
-        <Section title="Top referees">
+        <Section title="Referees who called the most fouls on this player">
           <RelList items={top_referees.slice(0, 3)} nameKey="official_name" />
         </Section>
       </div>
@@ -265,7 +271,7 @@ function EntityCard({ type, data }) {
   }
 
   // teams
-  const { team_tricode, top_referees, foul_breakdown } = data
+  const { team_tricode, top_referees, foul_breakdown, games_played, fouls_per_game } = data
   const total = foul_breakdown.reduce((s, f) => s + f.count, 0)
   return (
     <div>
@@ -273,11 +279,15 @@ function EntityCard({ type, data }) {
         <span className={styles.dotPlayer} />
         <div>
           <h2>{TEAM_NAMES[team_tricode] ?? team_tricode}</h2>
-          <p className={styles.totalFouls}>{total.toLocaleString()} fouls <span className={styles.teamBadge}>{team_tricode}</span></p>
+          <p className={styles.totalFouls}>
+            {total.toLocaleString()} fouls <span className={styles.teamBadge}>{team_tricode}</span>
+            {games_played != null && <span className={styles.cardMeta}> · {games_played} games</span>}
+            {fouls_per_game != null && <span className={styles.cardMeta}> · {fouls_per_game} fouls per game</span>}
+          </p>
         </div>
       </div>
       <Section title="Foul breakdown"><FoulTable rows={foul_breakdown} /></Section>
-      <Section title="Top referees">
+      <Section title="Referees who called the most fouls on this team">
         <RelList items={top_referees.slice(0, 3)} nameKey="official_name" />
       </Section>
     </div>

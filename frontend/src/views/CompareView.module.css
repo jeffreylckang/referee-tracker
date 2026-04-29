@@ -154,6 +154,12 @@
   padding: 1px 6px;
 }
 
+.cardMeta {
+  font-size: 13px;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
 /* Dots */
 .dotReferee {
   display: inline-block;

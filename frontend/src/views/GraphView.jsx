@@ -307,7 +307,7 @@ function PlayerPanel({ data }) {
       <Section title="Foul breakdown">
         {foul_breakdown.map(f => <Row key={f.foul_detail} label={FOUL_LABELS[f.foul_detail] ?? f.foul_detail} value={f.count} />)}
       </Section>
-      <Section title="Referees who called the most fouls">
+      <Section title="Referees who called the most fouls on this player">
         {top_referees.slice(0, 10).map(r => (
           <Row key={r.official_id} label={r.official_name} value={`${r.total_fouls} fouls`} />
         ))}
