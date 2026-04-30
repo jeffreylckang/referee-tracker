@@ -162,14 +162,14 @@ export default function CompareView() {
 
       <div className={styles.compareArea}>
         <div className={styles.side}>
-          {dataA
+          {selectedA && dataA
             ? <EntityCard type={type} data={dataA} />
             : <div className={styles.empty}>Select {entityLabel} to compare</div>
           }
         </div>
         <div className={styles.divider} />
         <div className={styles.side}>
-          {dataB
+          {selectedB && dataB
             ? <EntityCard type={type} data={dataB} />
             : <div className={styles.empty}>Select {entityLabel} to compare</div>
           }
@@ -215,8 +215,12 @@ function Picker({ list, type, search, setSearch, selected, onSelect }) {
 }
 
 function EntityCard({ type, data }) {
+  // Guard against error responses from the API (e.g. {"detail": "..."})
+  if (!data || data.detail) return null
+
   if (type === 'referees') {
     const { referee, top_players, top_players_drawn, foul_breakdown, period_breakdown, games_worked, fouls_per_game } = data
+    if (!referee || !foul_breakdown) return null
     const total = foul_breakdown.reduce((s, f) => s + f.count, 0)
     return (
       <div>
@@ -249,6 +253,7 @@ function EntityCard({ type, data }) {
 
   if (type === 'players') {
     const { player, top_referees, top_referees_drawn, foul_breakdown, period_breakdown, games_played, fouls_per_game, drawn_per_game } = data
+    if (!player || !foul_breakdown) return null
     const total = foul_breakdown.reduce((s, f) => s + f.count, 0)
     return (
       <div>
@@ -283,6 +288,7 @@ function EntityCard({ type, data }) {
 
   // teams
   const { team_tricode, top_referees, foul_breakdown, period_breakdown, games_played, fouls_per_game } = data
+  if (!team_tricode || !foul_breakdown) return null
   const total = foul_breakdown.reduce((s, f) => s + f.count, 0)
   return (
     <div>

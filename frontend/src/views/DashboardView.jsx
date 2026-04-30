@@ -626,30 +626,6 @@ function PlayerDetail({ data, season, summary }) {
         </Section>
       )}
 
-      {drawn_breakdown?.length > 0 && (
-        <Section title="Fouls drawn by this player">
-          <div className={styles.scrollTableWrap}>
-            <table className={styles.table}>
-              <thead>
-                <tr>
-                  <th>Foul Type</th>
-                  <th className={styles.num}>Times Drawn</th>
-                  <th>Top Referee</th>
-                </tr>
-              </thead>
-              <tbody>
-                {drawn_breakdown.map(row => (
-                  <tr key={row.foul_detail}>
-                    <td>{FOUL_LABELS[row.foul_detail] ?? row.foul_detail}</td>
-                    <td className={styles.num}>{row.times_drawn}</td>
-                    <td className={styles.muted}>{row.top_referee_name || '—'}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </Section>
-      )}
     </div>
   )
 }
