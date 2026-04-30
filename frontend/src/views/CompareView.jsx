@@ -240,7 +240,7 @@ function EntityCard({ type, data }) {
         </Section>
         {top_players_drawn?.length > 0 && (
           <Section title="Players who draw the most fouls called by this referee">
-            <RelList items={top_players_drawn.slice(0, 3)} nameKey="player_name" countKey="total_fouls_drawn" />
+            <RelList items={top_players_drawn.slice(0, 3)} nameKey="player_name" sub="team_tricode" countKey="total_fouls_drawn" countLabel="drawn" />
           </Section>
         )}
       </div>
@@ -248,7 +248,7 @@ function EntityCard({ type, data }) {
   }
 
   if (type === 'players') {
-    const { player, top_referees, top_referees_drawn, foul_breakdown, period_breakdown, games_played, fouls_per_game } = data
+    const { player, top_referees, top_referees_drawn, foul_breakdown, period_breakdown, games_played, fouls_per_game, drawn_per_game } = data
     const total = foul_breakdown.reduce((s, f) => s + f.count, 0)
     return (
       <div>
@@ -260,7 +260,8 @@ function EntityCard({ type, data }) {
               {total.toLocaleString()} fouls
               {player.team_tricode && <span className={styles.teamBadge}>{player.team_tricode}</span>}
               {games_played != null && <span className={styles.cardMeta}> · {games_played} games</span>}
-              {fouls_per_game != null && <span className={styles.cardMeta}> · {fouls_per_game} fouls per game</span>}
+              {fouls_per_game != null && <span className={styles.cardMeta}> · {fouls_per_game} fouls called/game</span>}
+              {drawn_per_game != null && <span className={styles.cardMeta}> · {drawn_per_game} fouls drawn/game</span>}
             </p>
           </div>
         </div>
@@ -273,7 +274,7 @@ function EntityCard({ type, data }) {
         </Section>
         {top_referees_drawn?.length > 0 && (
           <Section title="Referees who call the most fouls in favor of this player">
-            <RelList items={top_referees_drawn.slice(0, 3)} nameKey="official_name" countKey="total_fouls_drawn" />
+            <RelList items={top_referees_drawn.slice(0, 3)} nameKey="official_name" countKey="total_fouls_drawn" countLabel="drawn" />
           </Section>
         )}
       </div>
@@ -281,7 +282,7 @@ function EntityCard({ type, data }) {
   }
 
   // teams
-  const { team_tricode, top_referees, foul_breakdown, games_played, fouls_per_game } = data
+  const { team_tricode, top_referees, foul_breakdown, period_breakdown, games_played, fouls_per_game } = data
   const total = foul_breakdown.reduce((s, f) => s + f.count, 0)
   return (
     <div>
@@ -297,6 +298,9 @@ function EntityCard({ type, data }) {
         </div>
       </div>
       <Section title="Foul breakdown"><FoulTable rows={foul_breakdown} /></Section>
+      {period_breakdown?.length > 0 && (
+        <Section title="By quarter"><PeriodTable rows={period_breakdown} /></Section>
+      )}
       <Section title="Referees who called the most fouls on this team">
         <RelList items={top_referees.slice(0, 3)} nameKey="official_name" />
       </Section>
@@ -352,14 +356,14 @@ function PeriodTable({ rows }) {
   )
 }
 
-function RelList({ items, nameKey, sub, countKey = 'total_fouls' }) {
+function RelList({ items, nameKey, sub, countKey = 'total_fouls', countLabel = 'fouls' }) {
   if (!items?.length) return <p className={styles.muted}>No data</p>
   return (
     <div className={styles.relList}>
       {items.map((item, i) => (
         <div key={i} className={styles.relItem}>
           <span>{item[nameKey]}{sub && item[sub] && <span className={styles.muted}> · {item[sub]}</span>}</span>
-          <span className={styles.relCount}>{item[countKey]} fouls</span>
+          <span className={styles.relCount}>{item[countKey]} {countLabel}</span>
         </div>
       ))}
     </div>

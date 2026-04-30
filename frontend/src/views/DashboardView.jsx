@@ -411,7 +411,7 @@ function RefereeDetail({ data, season, summary }) {
           {season && <p className={styles.sub}>{season}</p>}
         </div>
       </div>
-      <DeviationControl fpg={fouls_per_game} season_trend={season_trend} leagueAvg={summary?.avg_fouls_per_game} />
+      <DeviationControl fpg={fouls_per_game} season_trend={season_trend} leagueAvg={summary?.avg_fouls_per_game} label="fouls called/game" />
 
       <div className={styles.sectionRow}>
         <Section title="Foul breakdown"><FoulTable foul_breakdown={foul_breakdown} /></Section>
@@ -468,15 +468,30 @@ function RefereeDetail({ data, season, summary }) {
             <table className={styles.table}>
               <thead>
                 <tr>
-                  <th>Player</th>
-                  <th className={styles.num}>Fouls Drawn</th>
+                  <th>Player</th><th>Team</th>
+                  <th className={styles.num}>Total</th>
+                  <th className={styles.num}>Shooting</th>
+                  <th className={styles.num}>Personal</th>
+                  <th className={styles.num}>Offensive</th>
+                  <th className={styles.num}>Loose Ball</th>
+                  <th className={styles.num}>Flagrant 1</th>
+                  <th className={styles.num}>Flagrant 2</th>
+                  <th className={styles.num}>Technical</th>
                 </tr>
               </thead>
               <tbody>
                 {top_players_drawn.map(p => (
                   <tr key={p.player_id}>
                     <td>{p.player_name}</td>
+                    <td className={styles.muted}>{p.team_tricode || '—'}</td>
                     <td className={styles.num}>{p.total_fouls_drawn}</td>
+                    <td className={styles.num}>{p.shooting || 0}</td>
+                    <td className={styles.num}>{p.personal || 0}</td>
+                    <td className={styles.num}>{p.offensive || 0}</td>
+                    <td className={styles.num}>{p.loose_ball || 0}</td>
+                    <td className={styles.num}>{p.flagrant_1 || 0}</td>
+                    <td className={styles.num}>{p.flagrant_2 || 0}</td>
+                    <td className={styles.num}>{p.technical || 0}</td>
                   </tr>
                 ))}
               </tbody>
@@ -581,7 +596,14 @@ function PlayerDetail({ data, season, summary }) {
               <thead>
                 <tr>
                   <th>Referee</th>
-                  <th className={styles.num}>Fouls Drawn</th>
+                  <th className={styles.num}>Total</th>
+                  <th className={styles.num}>Shooting</th>
+                  <th className={styles.num}>Personal</th>
+                  <th className={styles.num}>Offensive</th>
+                  <th className={styles.num}>Loose Ball</th>
+                  <th className={styles.num}>Flagrant 1</th>
+                  <th className={styles.num}>Flagrant 2</th>
+                  <th className={styles.num}>Technical</th>
                 </tr>
               </thead>
               <tbody>
@@ -589,6 +611,13 @@ function PlayerDetail({ data, season, summary }) {
                   <tr key={r.official_id}>
                     <td>{r.official_name}</td>
                     <td className={styles.num}>{r.total_fouls_drawn}</td>
+                    <td className={styles.num}>{r.shooting || 0}</td>
+                    <td className={styles.num}>{r.personal || 0}</td>
+                    <td className={styles.num}>{r.offensive || 0}</td>
+                    <td className={styles.num}>{r.loose_ball || 0}</td>
+                    <td className={styles.num}>{r.flagrant_1 || 0}</td>
+                    <td className={styles.num}>{r.flagrant_2 || 0}</td>
+                    <td className={styles.num}>{r.technical || 0}</td>
                   </tr>
                 ))}
               </tbody>
@@ -626,7 +655,7 @@ function PlayerDetail({ data, season, summary }) {
 }
 
 function TeamDetail({ data, season, summary }) {
-  const { team_tricode, top_referees, foul_breakdown, season_trend, fouls_per_game } = data
+  const { team_tricode, top_referees, foul_breakdown, period_breakdown, season_trend, fouls_per_game } = data
 
   return (
     <div className={styles.detailInner}>
@@ -639,7 +668,12 @@ function TeamDetail({ data, season, summary }) {
       </div>
       <DeviationControl fpg={fouls_per_game} season_trend={season_trend} leagueAvg={summary?.avg_team_fpg} />
 
-      <Section title="Foul breakdown"><FoulTable foul_breakdown={foul_breakdown} /></Section>
+      <div className={styles.sectionRow}>
+        <Section title="Foul breakdown"><FoulTable foul_breakdown={foul_breakdown} /></Section>
+        {period_breakdown?.length > 0 && (
+          <Section title="By quarter"><PeriodTable period_breakdown={period_breakdown} /></Section>
+        )}
+      </div>
 
       {season_trend?.length > 1 && (
         <Section title="Fouls called per game, by season">

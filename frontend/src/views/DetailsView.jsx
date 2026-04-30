@@ -87,10 +87,11 @@ export default function DetailsView() {
         <section className={styles.section}>
           <h2 className={styles.sectionTitle}>Limitations</h2>
           <p className={styles.lead}>
-            This data tracks foul calls, but the nature of a foul call is two-sided. A player who appears
-            frequently in the data could be there because they genuinely foul a lot, because certain referees
-            tend to call fouls on them more often, or both. High foul counts tell you a player was called often —
-            they don't tell you whether that's driven by how the player plays or by how referees see them.
+            Foul calls are three-sided. A player who commits many fouls could be there because they genuinely
+            play aggressively, because certain referees have a pattern of calling fouls on them, or because
+            the player they're guarding has a favorable whistle — drawing a lot of fouls from that referee.
+            Similarly, a player who draws many fouls might be a skilled foul-drawer, or might just be guarded
+            by players who foul a lot. High counts show patterns in the data; they don't explain the cause.
           </p>
         </section>
 

@@ -10,7 +10,11 @@ const BASE = import.meta.env.VITE_API_URL
 
 export default function App() {
   // Wake up the Render server on first load so it's warm by the time the user reaches Dashboard
-  useEffect(() => { fetch(`${BASE}/api/filters`).catch(() => {}) }, [])
+  useEffect(() => {
+    fetch(`${BASE}/api/filters`).catch(() => {})
+    fetch(`${BASE}/api/summary`).catch(() => {})
+    fetch(`${BASE}/api/referees`).catch(() => {})
+  }, [])
 
   return (
     <div className={styles.shell}>
