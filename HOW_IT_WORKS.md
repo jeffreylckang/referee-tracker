@@ -20,6 +20,8 @@ A Python script handles this automatically. It can run in two modes:
 - **Historical**: fetch an entire season's worth of games at once (covering 2019-20 through today)
 - **Daily**: run every morning at 11am ET, check if games were played yesterday, and pull only the new data
 
+The daily automation runs via a cron job on the local machine. It loads the database connection string from a local `.env` file, checks the NBA scoreboard for completed games, and only invokes the pipeline if games were actually played.
+
 ---
 
 ## Step 2: Storing the Data — PostgreSQL
@@ -47,11 +49,20 @@ The database lives on a server, but the website needs a way to ask it questions.
 
 Built with **FastAPI** (a Python framework), the API sits between the database and the website. It exposes a set of URLs that the website can call to get data back. For example:
 
-- `/api/referees` → returns all referees ranked by foul count
-- `/api/referee/123` → returns details for a specific referee
-- `/api/graph` → returns the full network of referee-player connections
+- `/api/referees` → all referees ranked by foul count
+- `/api/players` → all players ranked by foul count
+- `/api/teams` → all teams ranked by foul count
+- `/api/referee/{id}` → detail for a specific referee (foul breakdown, top players, season trend)
+- `/api/player/{id}` → detail for a specific player (foul breakdown, top referees, season trend)
+- `/api/team/{tricode}` → detail for a specific team
+- `/api/summary` → league-wide headline stats (avg fouls/game, leaders)
+- `/api/graph` → the full network of referee–player connections
+- `/api/filters` → available seasons, foul types, and teams
+- `/api/stats` → database snapshot (total games, foul events, referees, players)
 
 Every endpoint supports filters — season, game type (regular vs. playoffs), and foul type — so the website only gets back the data it needs.
+
+The API uses an **in-memory cache** (30-minute TTL) so repeated requests for the same data don't hit the database every time. Common queries are pre-warmed into the cache on server startup so the first page load is fast.
 
 The API is hosted on **Render**, a cloud platform that runs the Python server 24/7 so it's always reachable.
 
@@ -59,20 +70,22 @@ The API is hosted on **Render**, a cloud platform that runs the Python server 24
 
 ## Step 4: The Website
 
-The frontend is built with **React** (a JavaScript framework for building interactive UIs) and served as a static website.
+The frontend is built with **React** (a JavaScript framework for building interactive UIs) and deployed as a static site on Render. It has four views:
 
-It has two views:
+**Graph** — a force-directed network visualization where referees and players are nodes, and the lines between them represent foul relationships. The closer two nodes, the more fouls called between them. You can zoom, pan, and click any node to highlight its connections and see a detail panel.
 
-**Dashboard** — a searchable list of referees and players. Click any name to see their foul breakdown by type, and a table of who they're most connected to (e.g. which players a referee fouls the most, or which referees called the most fouls on a player).
+**Dashboard** — a searchable, filterable list of referees, players, and teams. Click any name to see their foul breakdown by type, fouls per game by season, how they compare to the league average, and a table of their most significant relationships (e.g. which players a referee calls the most fouls on, or which referees called the most fouls on a player).
 
-**Graph** — a 3D network visualization where referees and players are nodes, and the lines between them represent foul relationships. The thicker the line, the more fouls called. You can rotate, zoom, and click any node to see details.
+**Compare** — side-by-side comparison of any two referees, players, or teams across the same filters. Shows foul breakdown, fouls per game, and top relationships for each.
+
+**Details** — describes the data source, coverage, update schedule, and the structure of a foul event.
 
 ---
 
 ## How It All Connects
 
 ```
-Your laptop
+Your laptop (cron at 11am ET)
   ├─ fetches raw data from NBA CDN
   ├─ parses foul events in memory
   └─ writes directly to PostgreSQL on Render (over internet)
@@ -84,7 +97,9 @@ Your laptop
           │  FastAPI API server             │
           └─────────────────────────────────┘
                           ↓
-              React website (your browser)
+              React static site (Render)
+                          ↓
+                   Your browser
 ```
 
-Your laptop is only involved when the pipeline runs — it connects to Render, writes the data, and disconnects. The database and API live entirely in the cloud and are always reachable. The daily automation keeps the database current throughout the season without any manual steps.
+Your laptop is only involved when the pipeline runs — it connects to Render, writes the data, and disconnects. The database, API, and website all live in the cloud and are always reachable. The daily automation keeps the database current throughout the season without any manual steps.
