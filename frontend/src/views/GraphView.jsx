@@ -262,7 +262,7 @@ function periodLabel(p) {
 }
 
 function RefereePanel({ data }) {
-  const { referee, top_players, foul_breakdown, period_breakdown } = data
+  const { referee, top_players, top_players_drawn, foul_breakdown, period_breakdown } = data
   const total = period_breakdown?.reduce((s, p) => s + p.count, 0) || 0
   return (
     <>
@@ -279,17 +279,24 @@ function RefereePanel({ data }) {
       <Section title="Foul breakdown">
         {foul_breakdown.map(f => <Row key={f.foul_detail} label={FOUL_LABELS[f.foul_detail] ?? f.foul_detail} value={f.count} />)}
       </Section>
-      <Section title="Players called for the most fouls">
+      <Section title="Players called for the most fouls by this referee">
         {top_players.slice(0, 10).map(p => (
           <Row key={p.fouler_player_id} label={p.fouler_player_name} value={`${p.total_fouls} fouls`} />
         ))}
       </Section>
+      {top_players_drawn?.length > 0 && (
+        <Section title="Players who draw the most fouls called by this referee">
+          {top_players_drawn.slice(0, 10).map(p => (
+            <Row key={p.player_id} label={p.player_name} value={`${p.total_fouls_drawn} drawn`} />
+          ))}
+        </Section>
+      )}
     </>
   )
 }
 
 function PlayerPanel({ data }) {
-  const { player, top_referees, foul_breakdown, period_breakdown } = data
+  const { player, top_referees, top_referees_drawn, foul_breakdown, period_breakdown } = data
   const total = period_breakdown?.reduce((s, p) => s + p.count, 0) || 0
   return (
     <>
@@ -312,6 +319,13 @@ function PlayerPanel({ data }) {
           <Row key={r.official_id} label={r.official_name} value={`${r.total_fouls} fouls`} />
         ))}
       </Section>
+      {top_referees_drawn?.length > 0 && (
+        <Section title="Referees who call the most fouls in favor of this player">
+          {top_referees_drawn.slice(0, 10).map(r => (
+            <Row key={r.official_id} label={r.official_name} value={`${r.total_fouls_drawn} drawn`} />
+          ))}
+        </Section>
+      )}
     </>
   )
 }

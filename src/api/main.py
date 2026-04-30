@@ -246,6 +246,27 @@ def get_summary(
         """, p)
         top_team = dict(r) if (r := cur.fetchone()) else None
 
+        cur.execute(f"""
+            SELECT fouled_player_id AS player_id, MAX(fouled_player_name) AS player_name,
+                   COUNT(*) AS total_fouls_drawn
+            FROM foul_events
+            WHERE fouled_player_id IS NOT NULL {fd_filter}
+            GROUP BY fouled_player_id
+            ORDER BY total_fouls_drawn DESC LIMIT 1
+        """, p)
+        top_drawn_player = dict(r) if (r := cur.fetchone()) else None
+
+        cur.execute(f"""
+            WITH player_game AS (
+                SELECT fouled_player_id, game_id, COUNT(*) AS fouls
+                FROM foul_events
+                WHERE fouled_player_id IS NOT NULL {fd_filter}
+                GROUP BY fouled_player_id, game_id
+            )
+            SELECT ROUND(AVG(fouls)::numeric, 2) AS avg_drawn_fpg FROM player_game
+        """, p)
+        drawn_agg = cur.fetchone()
+
     else:
         p = {"season": season, "game_type": game_type, "fd": foul_detail}
         gt_clause = """
@@ -352,6 +373,33 @@ def get_summary(
         """, p)
         top_team = dict(r) if (r := cur.fetchone()) else None
 
+        cur.execute(f"""
+            SELECT f.fouled_player_id AS player_id, MAX(f.fouled_player_name) AS player_name,
+                   COUNT(*) AS total_fouls_drawn
+            FROM foul_events f
+            JOIN games g ON f.game_id = g.game_id
+            WHERE f.fouled_player_id IS NOT NULL
+              AND (%(season)s IS NULL OR g.season = %(season)s)
+              {gt_clause} {fd_filter}
+            GROUP BY f.fouled_player_id
+            ORDER BY total_fouls_drawn DESC LIMIT 1
+        """, p)
+        top_drawn_player = dict(r) if (r := cur.fetchone()) else None
+
+        cur.execute(f"""
+            WITH player_game AS (
+                SELECT f.fouled_player_id, f.game_id, COUNT(*) AS fouls
+                FROM foul_events f
+                JOIN games g ON g.game_id = f.game_id
+                WHERE f.fouled_player_id IS NOT NULL
+                  AND (%(season)s IS NULL OR g.season = %(season)s)
+                  {gt_clause} {fd_filter}
+                GROUP BY f.fouled_player_id, f.game_id
+            )
+            SELECT ROUND(AVG(fouls)::numeric, 2) AS avg_drawn_fpg FROM player_game
+        """, p)
+        drawn_agg = cur.fetchone()
+
     cur.close()
     conn.close()
 
@@ -363,9 +411,11 @@ def get_summary(
         "median_fouls_per_game": float(agg["med_fpg"]) if agg["med_fpg"] else None,
         "avg_player_fpg":      float(player_agg["avg_fpg"]) if player_agg and player_agg["avg_fpg"] else None,
         "avg_team_fpg":        float(team_agg["avg_fpg"])   if team_agg   and team_agg["avg_fpg"]   else None,
-        "most_active_ref":     top_ref,
-        "most_fouled_player":  top_player,
-        "most_penalized_team": top_team,
+        "most_active_ref":       top_ref,
+        "most_fouled_player":    top_player,
+        "most_penalized_team":   top_team,
+        "most_drawn_player":     top_drawn_player,
+        "avg_player_drawn_fpg":  float(drawn_agg["avg_drawn_fpg"]) if drawn_agg and drawn_agg["avg_drawn_fpg"] else None,
     }
     cache_set(cache_key, result)
     return result
@@ -514,14 +564,23 @@ def get_players(
                 SELECT DISTINCT fouler_player_id
                 FROM foul_events
                 WHERE foul_detail != 'technical'
+            ),
+            drawn AS (
+                SELECT fouled_player_id, COUNT(*) AS total_fouls_drawn
+                FROM foul_events
+                WHERE fouled_player_id IS NOT NULL
+                  AND (%(foul_detail)s IS NULL OR foul_detail = %(foul_detail)s)
+                GROUP BY fouled_player_id
             )
-            SELECT f.fouler_player_id       AS player_id,
-                   MAX(f.fouler_player_name) AS player_name,
-                   lt.fouler_team_tricode    AS team_tricode,
-                   COUNT(*)                 AS total_fouls
+            SELECT f.fouler_player_id                      AS player_id,
+                   MAX(f.fouler_player_name)               AS player_name,
+                   lt.fouler_team_tricode                  AS team_tricode,
+                   COUNT(*)                                AS total_fouls,
+                   COALESCE(MAX(d.total_fouls_drawn), 0)   AS total_fouls_drawn
             FROM foul_events f
             JOIN real_players rp ON rp.fouler_player_id = f.fouler_player_id
             LEFT JOIN latest_team lt ON lt.fouler_player_id = f.fouler_player_id
+            LEFT JOIN drawn d ON d.fouled_player_id = f.fouler_player_id
             WHERE f.fouler_player_id IS NOT NULL
               AND (%(foul_detail)s IS NULL OR f.foul_detail = %(foul_detail)s)
             GROUP BY f.fouler_player_id, lt.fouler_team_tricode
@@ -540,15 +599,29 @@ def get_players(
                 SELECT DISTINCT fouler_player_id
                 FROM foul_events
                 WHERE foul_detail != 'technical'
+            ),
+            drawn AS (
+                SELECT f2.fouled_player_id, COUNT(*) AS total_fouls_drawn
+                FROM foul_events f2
+                JOIN games g2 ON g2.game_id = f2.game_id
+                WHERE f2.fouled_player_id IS NOT NULL
+                  AND (%(season)s      IS NULL OR g2.season      = %(season)s)
+                  AND (%(foul_detail)s IS NULL OR f2.foul_detail = %(foul_detail)s)
+                  AND (%(game_type)s IS NULL
+                       OR (%(game_type)s = 'regular' AND g2.playoff_round IS NULL)
+                       OR (%(game_type)s = 'playoff' AND g2.playoff_round IS NOT NULL))
+                GROUP BY f2.fouled_player_id
             )
-            SELECT f.fouler_player_id                AS player_id,
-                   MAX(f.fouler_player_name)         AS player_name,
-                   lt.fouler_team_tricode            AS team_tricode,
-                   COUNT(*)                          AS total_fouls
+            SELECT f.fouler_player_id                      AS player_id,
+                   MAX(f.fouler_player_name)               AS player_name,
+                   lt.fouler_team_tricode                  AS team_tricode,
+                   COUNT(*)                                AS total_fouls,
+                   COALESCE(MAX(d.total_fouls_drawn), 0)   AS total_fouls_drawn
             FROM foul_events f
             JOIN games g ON f.game_id = g.game_id
             JOIN real_players rp ON rp.fouler_player_id = f.fouler_player_id
             LEFT JOIN latest_team lt ON lt.fouler_player_id = f.fouler_player_id
+            LEFT JOIN drawn d ON d.fouled_player_id = f.fouler_player_id
             WHERE f.fouler_player_id IS NOT NULL
               AND (%(season)s      IS NULL OR g.season      = %(season)s)
               AND (%(foul_detail)s IS NULL OR f.foul_detail = %(foul_detail)s)
@@ -767,6 +840,18 @@ def get_referee(
         top_players = [dict(r) for r in cur.fetchall()]
 
         cur.execute("""
+            SELECT fouled_player_id AS player_id, MAX(fouled_player_name) AS player_name,
+                   COUNT(*) AS total_fouls_drawn
+            FROM foul_events
+            WHERE official_id = %(official_id)s
+              AND fouled_player_id IS NOT NULL
+              AND (%(foul_detail)s IS NULL OR foul_detail = %(foul_detail)s)
+            GROUP BY fouled_player_id
+            ORDER BY total_fouls_drawn DESC LIMIT 25
+        """, params)
+        top_players_drawn = [dict(r) for r in cur.fetchall()]
+
+        cur.execute("""
             SELECT foul_detail, COUNT(*) AS count
             FROM foul_events
             WHERE official_id = %(official_id)s
@@ -832,6 +917,21 @@ def get_referee(
         top_players = [dict(r) for r in cur.fetchall()]
 
         cur.execute(f"""
+            SELECT f.fouled_player_id AS player_id, MAX(f.fouled_player_name) AS player_name,
+                   COUNT(*) AS total_fouls_drawn
+            FROM foul_events f
+            JOIN games g ON f.game_id = g.game_id
+            WHERE f.official_id = %(official_id)s
+              AND f.fouled_player_id IS NOT NULL
+              AND (%(season)s      IS NULL OR g.season      = %(season)s)
+              AND (%(foul_detail)s IS NULL OR f.foul_detail = %(foul_detail)s)
+              {GAME_TYPE_CLAUSE}
+            GROUP BY f.fouled_player_id
+            ORDER BY total_fouls_drawn DESC LIMIT 25
+        """, params)
+        top_players_drawn = [dict(r) for r in cur.fetchall()]
+
+        cur.execute(f"""
             SELECT foul_detail, COUNT(*) AS count
             FROM foul_events f
             JOIN games g ON f.game_id = g.game_id
@@ -885,6 +985,7 @@ def get_referee(
     cur.close()
     conn.close()
     result = {"referee": dict(referee), "top_players": top_players,
+              "top_players_drawn": top_players_drawn,
               "foul_breakdown": foul_breakdown, "period_breakdown": period_breakdown,
               "season_trend": season_trend,
               "games_worked": gw,
@@ -957,6 +1058,83 @@ def get_player(
     """, params)
     top_referees = [dict(r) for r in cur.fetchall()]
 
+    # Referees who called the most fouls IN FAVOR of this player (drawn)
+    cur.execute(f"""
+        SELECT f.official_id, MAX(f.official_name) AS official_name,
+               COUNT(*) AS total_fouls_drawn
+        FROM foul_events f
+        JOIN games g ON f.game_id = g.game_id
+        WHERE f.fouled_player_id = %(player_id)s
+          AND f.official_id IS NOT NULL
+          AND (%(season)s      IS NULL OR g.season      = %(season)s)
+          AND (%(foul_detail)s IS NULL OR f.foul_detail = %(foul_detail)s)
+          {GAME_TYPE_CLAUSE}
+        GROUP BY f.official_id
+        ORDER BY total_fouls_drawn DESC
+        LIMIT 25
+    """, params)
+    top_referees_drawn = [dict(r) for r in cur.fetchall()]
+
+    # Drawn breakdown by foul type with top referee for each type
+    cur.execute(f"""
+        WITH drawn_by_type AS (
+            SELECT f.foul_detail, f.official_id, MAX(f.official_name) AS official_name,
+                   COUNT(*) AS cnt
+            FROM foul_events f
+            JOIN games g ON g.game_id = f.game_id
+            WHERE f.fouled_player_id = %(player_id)s
+              AND f.official_id IS NOT NULL
+              AND (%(season)s      IS NULL OR g.season      = %(season)s)
+              AND (%(foul_detail)s IS NULL OR f.foul_detail = %(foul_detail)s)
+              {GAME_TYPE_CLAUSE}
+            GROUP BY f.foul_detail, f.official_id
+        ),
+        top_ref_per_type AS (
+            SELECT DISTINCT ON (foul_detail) foul_detail, official_name
+            FROM drawn_by_type
+            ORDER BY foul_detail, cnt DESC
+        ),
+        total_by_type AS (
+            SELECT foul_detail, SUM(cnt) AS times_drawn
+            FROM drawn_by_type
+            GROUP BY foul_detail
+        )
+        SELECT t.foul_detail, t.times_drawn, r.official_name AS top_referee_name
+        FROM total_by_type t
+        JOIN top_ref_per_type r ON r.foul_detail = t.foul_detail
+        ORDER BY t.times_drawn DESC
+    """, params)
+    drawn_breakdown = [dict(r) for r in cur.fetchall()]
+
+    # Drawn season trend
+    cur.execute(f"""
+        SELECT g.season,
+               COUNT(*)                      AS total_fouls_drawn,
+               COUNT(DISTINCT f.game_id)     AS games_played,
+               ROUND(COUNT(*)::numeric / NULLIF(COUNT(DISTINCT f.game_id), 0), 2) AS drawn_per_game
+        FROM foul_events f
+        JOIN games g ON g.game_id = f.game_id
+        WHERE f.fouled_player_id = %(player_id)s
+          AND g.season IS NOT NULL
+          AND (%(foul_detail)s IS NULL OR f.foul_detail = %(foul_detail)s)
+          {GAME_TYPE_CLAUSE}
+        GROUP BY g.season ORDER BY g.season
+    """, params)
+    drawn_season_trend = [dict(r) for r in cur.fetchall()]
+
+    # Drawn totals (for drawn_per_game)
+    cur.execute(f"""
+        SELECT COUNT(*) AS total_fouls_drawn, COUNT(DISTINCT f.game_id) AS games_played
+        FROM foul_events f
+        JOIN games g ON g.game_id = f.game_id
+        WHERE f.fouled_player_id = %(player_id)s
+          AND (%(season)s      IS NULL OR g.season      = %(season)s)
+          AND (%(foul_detail)s IS NULL OR f.foul_detail = %(foul_detail)s)
+          {GAME_TYPE_CLAUSE}
+    """, params)
+    drawn_stats = cur.fetchone()
+    gp_drawn = drawn_stats["games_played"] if drawn_stats else 0
+
     cur.execute(f"""
         SELECT foul_detail, COUNT(*) AS count
         FROM foul_events f
@@ -1013,6 +1191,11 @@ def get_player(
     cur.close()
     conn.close()
     result = {"player": player_dict, "top_referees": top_referees,
+              "top_referees_drawn": top_referees_drawn,
+              "drawn_breakdown": drawn_breakdown,
+              "drawn_season_trend": drawn_season_trend,
+              "fouls_drawn": drawn_stats["total_fouls_drawn"] if drawn_stats else 0,
+              "drawn_per_game": round(drawn_stats["total_fouls_drawn"] / gp_drawn, 2) if gp_drawn else None,
               "foul_breakdown": foul_breakdown, "period_breakdown": period_breakdown,
               "season_trend": season_trend,
               "games_played": gp,

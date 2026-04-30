@@ -39,7 +39,8 @@ export default function DashboardView() {
   const [search,     setSearch]     = useState('')
   const [detail,     setDetail]     = useState(null)
   const [loading,    setLoading]    = useState(true)
-  const [summary, setSummary] = useState(null)
+  const [summary,    setSummary]    = useState(null)
+  const [playerSort, setPlayerSort] = useState('called')
 
   useEffect(() => {
     fetchFilters().then(f => setFilters(f))
@@ -119,7 +120,7 @@ export default function DashboardView() {
             <div className={styles.empty}>Loading…</div>
           ) : tab === 'referees' ? (
             <table className={styles.table}>
-              <thead><tr><th>Referee</th><th className={styles.num}>Total fouls</th></tr></thead>
+              <thead><tr><th>Referee</th><th className={styles.num}>Total Fouls Called</th></tr></thead>
               <tbody>
                 {filteredReferees.map(r => (
                   <tr key={r.official_id} onClick={() => selectReferee(r)}
@@ -132,14 +133,32 @@ export default function DashboardView() {
             </table>
           ) : tab === 'players' ? (
             <table className={styles.table}>
-              <thead><tr><th>Player</th><th>Team</th><th className={styles.num}>Total fouls</th></tr></thead>
+              <thead>
+                <tr>
+                  <th>Player</th>
+                  <th>Team</th>
+                  <th className={`${styles.num} ${playerSort === 'called' ? styles.sortActive : styles.sortable}`}
+                      onClick={() => setPlayerSort('called')} title="Sort by fouls called">
+                    Called ↕
+                  </th>
+                  <th className={`${styles.num} ${playerSort === 'drawn' ? styles.sortActive : styles.sortable}`}
+                      onClick={() => setPlayerSort('drawn')} title="Sort by fouls drawn">
+                    Drawn ↕
+                  </th>
+                </tr>
+              </thead>
               <tbody>
-                {filteredPlayers.map(p => (
+                {[...filteredPlayers]
+                  .sort((a, b) => playerSort === 'drawn'
+                    ? (b.total_fouls_drawn || 0) - (a.total_fouls_drawn || 0)
+                    : (b.total_fouls || 0) - (a.total_fouls || 0))
+                  .map(p => (
                   <tr key={p.player_id} onClick={() => selectPlayer(p)}
                     className={detail?.data?.player?.player_id === p.player_id ? styles.selectedRow : styles.row}>
                     <td>{p.player_name}</td>
                     <td className={styles.muted}>{p.team_tricode || '—'}</td>
                     <td className={styles.num}>{p.total_fouls.toLocaleString()}</td>
+                    <td className={styles.num}>{(p.total_fouls_drawn || 0).toLocaleString()}</td>
                   </tr>
                 ))}
               </tbody>
@@ -183,7 +202,7 @@ export default function DashboardView() {
 function LeagueBanner({ summary, collapsed, onExpand }) {
   if (!summary) return null
   const { total_fouls, total_games, total_refs, avg_fouls_per_game, median_fouls_per_game,
-          most_active_ref, most_fouled_player, most_penalized_team } = summary
+          most_active_ref, most_fouled_player, most_drawn_player, most_penalized_team } = summary
 
   if (collapsed) {
     return (
@@ -213,9 +232,14 @@ function LeagueBanner({ summary, collapsed, onExpand }) {
             sub={`${most_active_ref.total_fouls?.toLocaleString()} fouls · ${most_active_ref.games_worked} games`} />
         )}
         {most_fouled_player && (
-          <LeaderCard accent="var(--player)" label="Most fouled player"
+          <LeaderCard accent="var(--player)" label="Most fouls committed"
             name={most_fouled_player.player_name}
             sub={`${most_fouled_player.total_fouls?.toLocaleString()} fouls`} />
+        )}
+        {most_drawn_player && (
+          <LeaderCard accent="var(--player)" label="Most fouls drawn"
+            name={most_drawn_player.player_name}
+            sub={`${most_drawn_player.total_fouls_drawn?.toLocaleString()} fouls drawn`} />
         )}
         {most_penalized_team && (
           <LeaderCard accent="rgba(100,116,139,0.7)" label="Most penalized team"
@@ -246,15 +270,15 @@ function LeaderCard({ accent, label, name, sub }) {
   )
 }
 
-function DeviationControl({ fpg, season_trend, leagueAvg }) {
+function DeviationControl({ fpg, season_trend, leagueAvg, totalFoulsKey = 'total_fouls', label = 'fouls/game' }) {
   const [mode, setMode] = useState('league')
 
   const careerFpg = useMemo(() => {
     if (!season_trend?.length) return null
-    const totalFouls = season_trend.reduce((s, r) => s + (r.total_fouls || 0), 0)
+    const totalFouls = season_trend.reduce((s, r) => s + (r[totalFoulsKey] || 0), 0)
     const totalGames = season_trend.reduce((s, r) => s + (r.games_worked || r.games_played || 0), 0)
     return totalGames > 0 ? totalFouls / totalGames : null
-  }, [season_trend])
+  }, [season_trend, totalFoulsKey])
 
   const comp  = mode === 'league' ? leagueAvg : careerFpg
   const pct   = comp && fpg != null ? (fpg - comp) / comp * 100 : null
@@ -263,9 +287,9 @@ function DeviationControl({ fpg, season_trend, leagueAvg }) {
 
   return (
     <div className={styles.deviationRow}>
-      <span className={styles.deviationFpg}>{fpg != null ? `${fpg} fouls/game` : '—'}</span>
+      <span className={styles.deviationFpg}>{fpg != null ? `${fpg} ${label}` : '—'}</span>
       <span className={styles.deviationVs}>vs</span>
-      <span className={styles.deviationFpg}>{comp != null ? `${comp.toFixed(2)} fouls/game` : '—'}</span>
+      <span className={styles.deviationFpg}>{comp != null ? `${comp.toFixed(2)} ${label}` : '—'}</span>
       <select className={styles.deviationSelect} value={mode} onChange={e => setMode(e.target.value)}>
         <option value="league">league avg</option>
         <option value="career">own career avg</option>
@@ -310,18 +334,18 @@ function WeightedTable({ items, nameKey, idKey }) {
   )
 }
 
-function SeasonChart({ season_trend, note }) {
+function SeasonChart({ season_trend, note, fpgKey = 'fouls_per_game' }) {
   if (!season_trend?.length) return null
-  const max = Math.max(...season_trend.map(s => parseFloat(s.fouls_per_game) || 0))
+  const max = Math.max(...season_trend.map(s => parseFloat(s[fpgKey]) || 0))
   if (!max) return null
   return (
     <>
       {note && <p className={styles.chartNote}>{note}</p>}
       <div className={styles.chartWrap}>
         {season_trend.map(s => {
-          const val = parseFloat(s.fouls_per_game) || 0
+          const val = parseFloat(s[fpgKey]) || 0
           const pct = max > 0 ? (val / max) * 100 : 0
-          const label = s.season?.slice(2).replace('-', '–') ?? s.season
+          const lbl = s.season?.slice(2).replace('-', '–') ?? s.season
           const games = s.games_worked ?? s.games_played
           return (
             <div key={s.season} className={styles.chartCol} title={`${s.season}: ${val} fouls/game (${games} games)`}>
@@ -329,7 +353,7 @@ function SeasonChart({ season_trend, note }) {
                 <div className={styles.chartBarVal}>{val.toFixed(1)}</div>
                 <div className={styles.chartBar} style={{ height: `${pct}%` }} />
               </div>
-              <div className={styles.chartLabel}>{label}</div>
+              <div className={styles.chartLabel}>{lbl}</div>
             </div>
           )
         })}
@@ -376,7 +400,7 @@ function FoulTable({ foul_breakdown }) {
 }
 
 function RefereeDetail({ data, season, summary }) {
-  const { referee, top_players, foul_breakdown, period_breakdown, season_trend, fouls_per_game } = data
+  const { referee, top_players, top_players_drawn, foul_breakdown, period_breakdown, season_trend, fouls_per_game } = data
 
   return (
     <div className={styles.detailInner}>
@@ -403,44 +427,71 @@ function RefereeDetail({ data, season, summary }) {
       )}
 
       <Section title="Players called for the most fouls by this referee">
-        <table className={styles.table}>
-          <thead>
-            <tr>
-              <th>Player</th><th>Team</th>
-              <th className={styles.num}>Fouls</th>
-              <th className={styles.num}>Shooting</th>
-              <th className={styles.num}>Personal</th>
-              <th className={styles.num}>Offensive</th>
-              <th className={styles.num}>Loose Ball</th>
-              <th className={styles.num}>Flagrant 1</th>
-              <th className={styles.num}>Flagrant 2</th>
-              <th className={styles.num}>Technical</th>
-            </tr>
-          </thead>
-          <tbody>
-            {top_players.map(p => (
-              <tr key={p.fouler_player_id}>
-                <td>{p.fouler_player_name}</td>
-                <td className={styles.muted}>{p.fouler_team_tricode || '—'}</td>
-                <td className={styles.num}>{p.total_fouls}</td>
-                <td className={styles.num}>{p.shooting || 0}</td>
-                <td className={styles.num}>{p.personal || 0}</td>
-                <td className={styles.num}>{p.offensive || 0}</td>
-                <td className={styles.num}>{p.loose_ball || 0}</td>
-                <td className={styles.num}>{p.flagrant_1 || 0}</td>
-                <td className={styles.num}>{p.flagrant_2 || 0}</td>
-                <td className={styles.num}>{p.technical || 0}</td>
+        <div className={styles.scrollTableWrap}>
+          <table className={styles.table}>
+            <thead>
+              <tr>
+                <th>Player</th><th>Team</th>
+                <th className={styles.num}>Fouls</th>
+                <th className={styles.num}>Shooting</th>
+                <th className={styles.num}>Personal</th>
+                <th className={styles.num}>Offensive</th>
+                <th className={styles.num}>Loose Ball</th>
+                <th className={styles.num}>Flagrant 1</th>
+                <th className={styles.num}>Flagrant 2</th>
+                <th className={styles.num}>Technical</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {top_players.map(p => (
+                <tr key={p.fouler_player_id}>
+                  <td>{p.fouler_player_name}</td>
+                  <td className={styles.muted}>{p.fouler_team_tricode || '—'}</td>
+                  <td className={styles.num}>{p.total_fouls}</td>
+                  <td className={styles.num}>{p.shooting || 0}</td>
+                  <td className={styles.num}>{p.personal || 0}</td>
+                  <td className={styles.num}>{p.offensive || 0}</td>
+                  <td className={styles.num}>{p.loose_ball || 0}</td>
+                  <td className={styles.num}>{p.flagrant_1 || 0}</td>
+                  <td className={styles.num}>{p.flagrant_2 || 0}</td>
+                  <td className={styles.num}>{p.technical || 0}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </Section>
+
+      {top_players_drawn?.length > 0 && (
+        <Section title="Players who draw the most fouls called by this referee">
+          <div className={styles.scrollTableWrap}>
+            <table className={styles.table}>
+              <thead>
+                <tr>
+                  <th>Player</th>
+                  <th className={styles.num}>Fouls Drawn</th>
+                </tr>
+              </thead>
+              <tbody>
+                {top_players_drawn.map(p => (
+                  <tr key={p.player_id}>
+                    <td>{p.player_name}</td>
+                    <td className={styles.num}>{p.total_fouls_drawn}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Section>
+      )}
     </div>
   )
 }
 
 function PlayerDetail({ data, season, summary }) {
-  const { player, top_referees, foul_breakdown, period_breakdown, season_trend, fouls_per_game } = data
+  const { player, top_referees, top_referees_drawn, drawn_breakdown,
+          drawn_season_trend, fouls_drawn, drawn_per_game,
+          foul_breakdown, period_breakdown, season_trend, fouls_per_game } = data
 
   return (
     <div className={styles.detailInner}>
@@ -451,7 +502,20 @@ function PlayerDetail({ data, season, summary }) {
           <p className={styles.sub}>{[player.team_tricode, season].filter(Boolean).join(' · ')}</p>
         </div>
       </div>
-      <DeviationControl fpg={fouls_per_game} season_trend={season_trend} leagueAvg={summary?.avg_player_fpg} />
+
+      <div className={styles.twoColDeviation}>
+        <div>
+          <p className={styles.deviationLabel}>Fouls Called</p>
+          <DeviationControl fpg={fouls_per_game} season_trend={season_trend}
+            leagueAvg={summary?.avg_player_fpg} label="fouls called/game" />
+        </div>
+        <div>
+          <p className={styles.deviationLabel}>Fouls Drawn</p>
+          <DeviationControl fpg={drawn_per_game} season_trend={drawn_season_trend}
+            leagueAvg={summary?.avg_player_drawn_fpg} totalFoulsKey="total_fouls_drawn"
+            label="fouls drawn/game" />
+        </div>
+      </div>
 
       <div className={styles.sectionRow}>
         <Section title="Foul breakdown"><FoulTable foul_breakdown={foul_breakdown} /></Section>
@@ -460,44 +524,103 @@ function PlayerDetail({ data, season, summary }) {
         )}
       </div>
 
-      {season_trend?.length > 1 && (
-        <Section title="Fouls called per game, by season">
-          <SeasonChart season_trend={season_trend} note="Fouls called on this player divided by games they appeared in foul data that season." />
-        </Section>
+      {(season_trend?.length > 1 || drawn_season_trend?.length > 1) && (
+        <div className={styles.twoColCharts}>
+          {season_trend?.length > 1 && (
+            <Section title="Fouls called per game, by season">
+              <SeasonChart season_trend={season_trend} />
+            </Section>
+          )}
+          {drawn_season_trend?.length > 1 && (
+            <Section title="Fouls drawn per game, by season">
+              <SeasonChart season_trend={drawn_season_trend} fpgKey="drawn_per_game" />
+            </Section>
+          )}
+        </div>
       )}
 
       <Section title="Referees who called the most fouls on this player">
-        <table className={styles.table}>
-          <thead>
-            <tr>
-              <th>Referee</th>
-              <th className={styles.num}>Fouls</th>
-              <th className={styles.num}>Shooting</th>
-              <th className={styles.num}>Personal</th>
-              <th className={styles.num}>Offensive</th>
-              <th className={styles.num}>Loose Ball</th>
-              <th className={styles.num}>Flagrant 1</th>
-              <th className={styles.num}>Flagrant 2</th>
-              <th className={styles.num}>Technical</th>
-            </tr>
-          </thead>
-          <tbody>
-            {top_referees.map(r => (
-              <tr key={r.official_id}>
-                <td>{r.official_name}</td>
-                <td className={styles.num}>{r.total_fouls}</td>
-                <td className={styles.num}>{r.shooting || 0}</td>
-                <td className={styles.num}>{r.personal || 0}</td>
-                <td className={styles.num}>{r.offensive || 0}</td>
-                <td className={styles.num}>{r.loose_ball || 0}</td>
-                <td className={styles.num}>{r.flagrant_1 || 0}</td>
-                <td className={styles.num}>{r.flagrant_2 || 0}</td>
-                <td className={styles.num}>{r.technical || 0}</td>
+        <div className={styles.scrollTableWrap}>
+          <table className={styles.table}>
+            <thead>
+              <tr>
+                <th>Referee</th>
+                <th className={styles.num}>Fouls</th>
+                <th className={styles.num}>Shooting</th>
+                <th className={styles.num}>Personal</th>
+                <th className={styles.num}>Offensive</th>
+                <th className={styles.num}>Loose Ball</th>
+                <th className={styles.num}>Flagrant 1</th>
+                <th className={styles.num}>Flagrant 2</th>
+                <th className={styles.num}>Technical</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {top_referees.map(r => (
+                <tr key={r.official_id}>
+                  <td>{r.official_name}</td>
+                  <td className={styles.num}>{r.total_fouls}</td>
+                  <td className={styles.num}>{r.shooting || 0}</td>
+                  <td className={styles.num}>{r.personal || 0}</td>
+                  <td className={styles.num}>{r.offensive || 0}</td>
+                  <td className={styles.num}>{r.loose_ball || 0}</td>
+                  <td className={styles.num}>{r.flagrant_1 || 0}</td>
+                  <td className={styles.num}>{r.flagrant_2 || 0}</td>
+                  <td className={styles.num}>{r.technical || 0}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </Section>
+
+      {top_referees_drawn?.length > 0 && (
+        <Section title="Referees who call the most fouls in favor of this player">
+          <div className={styles.scrollTableWrap}>
+            <table className={styles.table}>
+              <thead>
+                <tr>
+                  <th>Referee</th>
+                  <th className={styles.num}>Fouls Drawn</th>
+                </tr>
+              </thead>
+              <tbody>
+                {top_referees_drawn.map(r => (
+                  <tr key={r.official_id}>
+                    <td>{r.official_name}</td>
+                    <td className={styles.num}>{r.total_fouls_drawn}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Section>
+      )}
+
+      {drawn_breakdown?.length > 0 && (
+        <Section title="Fouls drawn by this player">
+          <div className={styles.scrollTableWrap}>
+            <table className={styles.table}>
+              <thead>
+                <tr>
+                  <th>Foul Type</th>
+                  <th className={styles.num}>Times Drawn</th>
+                  <th>Top Referee</th>
+                </tr>
+              </thead>
+              <tbody>
+                {drawn_breakdown.map(row => (
+                  <tr key={row.foul_detail}>
+                    <td>{FOUL_LABELS[row.foul_detail] ?? row.foul_detail}</td>
+                    <td className={styles.num}>{row.times_drawn}</td>
+                    <td className={styles.muted}>{row.top_referee_name || '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Section>
+      )}
     </div>
   )
 }

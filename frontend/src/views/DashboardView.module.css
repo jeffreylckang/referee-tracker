@@ -398,3 +398,60 @@
   color: var(--text-muted);
   font-size: 15px;
 }
+
+/* ─── Sortable column headers ─── */
+.sortable {
+  cursor: pointer;
+  color: var(--text-muted);
+  user-select: none;
+}
+.sortable:hover { color: var(--text); }
+.sortActive {
+  cursor: pointer;
+  color: var(--accent);
+  user-select: none;
+}
+
+/* ─── Scrollable table wrapper ─── */
+.scrollTableWrap {
+  max-height: 280px;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+.scrollTableWrap .table thead th {
+  position: sticky;
+  top: 0;
+  background: var(--bg);
+  z-index: 1;
+}
+
+/* ─── Two-column deviation (player detail) ─── */
+.twoColDeviation {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 32px;
+}
+.twoColDeviation .deviationRow {
+  margin-bottom: 0;
+}
+.deviationLabel {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+
+/* ─── Two-column season charts (player detail) ─── */
+.twoColCharts {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  margin-bottom: 36px;
+}
+.twoColCharts > * {
+  margin-bottom: 0;
+}

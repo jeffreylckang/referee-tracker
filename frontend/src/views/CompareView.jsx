@@ -216,7 +216,7 @@ function Picker({ list, type, search, setSearch, selected, onSelect }) {
 
 function EntityCard({ type, data }) {
   if (type === 'referees') {
-    const { referee, top_players, foul_breakdown, period_breakdown, games_worked, fouls_per_game } = data
+    const { referee, top_players, top_players_drawn, foul_breakdown, period_breakdown, games_worked, fouls_per_game } = data
     const total = foul_breakdown.reduce((s, f) => s + f.count, 0)
     return (
       <div>
@@ -236,14 +236,19 @@ function EntityCard({ type, data }) {
           <Section title="By quarter"><PeriodTable rows={period_breakdown} /></Section>
         )}
         <Section title="Players called for the most fouls by this referee">
-          <RelList items={top_players.slice(0, 3)} nameKey="fouler_player_name" sub="fouler_team_tricode" />
+          <RelList items={top_players.slice(0, 3)} nameKey="fouler_player_name" sub="fouler_team_tricode" countKey="total_fouls" />
         </Section>
+        {top_players_drawn?.length > 0 && (
+          <Section title="Players who draw the most fouls called by this referee">
+            <RelList items={top_players_drawn.slice(0, 3)} nameKey="player_name" countKey="total_fouls_drawn" />
+          </Section>
+        )}
       </div>
     )
   }
 
   if (type === 'players') {
-    const { player, top_referees, foul_breakdown, period_breakdown, games_played, fouls_per_game } = data
+    const { player, top_referees, top_referees_drawn, foul_breakdown, period_breakdown, games_played, fouls_per_game } = data
     const total = foul_breakdown.reduce((s, f) => s + f.count, 0)
     return (
       <div>
@@ -264,8 +269,13 @@ function EntityCard({ type, data }) {
           <Section title="By quarter"><PeriodTable rows={period_breakdown} /></Section>
         )}
         <Section title="Referees who called the most fouls on this player">
-          <RelList items={top_referees.slice(0, 3)} nameKey="official_name" />
+          <RelList items={top_referees.slice(0, 3)} nameKey="official_name" countKey="total_fouls" />
         </Section>
+        {top_referees_drawn?.length > 0 && (
+          <Section title="Referees who call the most fouls in favor of this player">
+            <RelList items={top_referees_drawn.slice(0, 3)} nameKey="official_name" countKey="total_fouls_drawn" />
+          </Section>
+        )}
       </div>
     )
   }
@@ -342,14 +352,14 @@ function PeriodTable({ rows }) {
   )
 }
 
-function RelList({ items, nameKey, sub }) {
+function RelList({ items, nameKey, sub, countKey = 'total_fouls' }) {
   if (!items?.length) return <p className={styles.muted}>No data</p>
   return (
     <div className={styles.relList}>
       {items.map((item, i) => (
         <div key={i} className={styles.relItem}>
           <span>{item[nameKey]}{sub && item[sub] && <span className={styles.muted}> · {item[sub]}</span>}</span>
-          <span className={styles.relCount}>{item.total_fouls} fouls</span>
+          <span className={styles.relCount}>{item[countKey]} fouls</span>
         </div>
       ))}
     </div>
