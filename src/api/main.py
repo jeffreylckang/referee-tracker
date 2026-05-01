@@ -214,13 +214,13 @@ def get_summary(
         team_agg = cur.fetchone()
 
         cur.execute(f"""
-            SELECT official_id, official_name,
+            SELECT official_id, MAX(official_name) AS official_name,
                    COUNT(*) AS total_fouls,
                    COUNT(DISTINCT game_id) AS games_worked,
                    ROUND(COUNT(*)::numeric / NULLIF(COUNT(DISTINCT game_id), 0), 1) AS fouls_per_game
             FROM foul_events
             WHERE official_id IS NOT NULL {fd_filter}
-            GROUP BY official_id, official_name
+            GROUP BY official_id
             ORDER BY total_fouls DESC LIMIT 1
         """, p)
         top_ref = dict(r) if (r := cur.fetchone()) else None
@@ -339,7 +339,7 @@ def get_summary(
         team_agg = cur.fetchone()
 
         cur.execute(f"""
-            SELECT f.official_id, f.official_name,
+            SELECT f.official_id, MAX(f.official_name) AS official_name,
                    COUNT(*) AS total_fouls,
                    COUNT(DISTINCT f.game_id) AS games_worked,
                    ROUND(COUNT(*)::numeric / NULLIF(COUNT(DISTINCT f.game_id), 0), 1) AS fouls_per_game
@@ -348,7 +348,7 @@ def get_summary(
             WHERE f.official_id IS NOT NULL
               AND (%(season)s IS NULL OR g.season = %(season)s)
               {gt_clause} {fd_filter}
-            GROUP BY f.official_id, f.official_name
+            GROUP BY f.official_id
             ORDER BY total_fouls DESC LIMIT 1
         """, p)
         top_ref = dict(r) if (r := cur.fetchone()) else None
@@ -720,7 +720,7 @@ def get_team(
     cur.execute(f"""
         SELECT
             f.official_id,
-            f.official_name,
+            MAX(f.official_name)                                           AS official_name,
             COUNT(*)                                                        AS total_fouls,
             COUNT(DISTINCT f.game_id)                                      AS games_shared,
             SUM(CASE WHEN f.foul_detail = 'shooting'   THEN 1 ELSE 0 END) AS shooting,
@@ -737,7 +737,7 @@ def get_team(
           AND (%(season)s      IS NULL OR g.season      = %(season)s)
           AND (%(foul_detail)s IS NULL OR f.foul_detail = %(foul_detail)s)
           {GAME_TYPE_CLAUSE}
-        GROUP BY f.official_id, f.official_name
+        GROUP BY f.official_id
         ORDER BY total_fouls DESC
         LIMIT 25
     """, params)
@@ -1095,7 +1095,7 @@ def get_player(
     cur.execute(f"""
         SELECT
             f.official_id,
-            f.official_name,
+            MAX(f.official_name)                                           AS official_name,
             COUNT(*)                                                        AS total_fouls,
             COUNT(DISTINCT f.game_id)                                      AS games_shared,
             SUM(CASE WHEN f.foul_detail = 'shooting'   THEN 1 ELSE 0 END) AS shooting,
@@ -1112,7 +1112,7 @@ def get_player(
           AND (%(season)s      IS NULL OR g.season      = %(season)s)
           AND (%(foul_detail)s IS NULL OR f.foul_detail = %(foul_detail)s)
           {GAME_TYPE_CLAUSE}
-        GROUP BY f.official_id, f.official_name
+        GROUP BY f.official_id
         ORDER BY total_fouls DESC
         LIMIT 25
     """, params)
