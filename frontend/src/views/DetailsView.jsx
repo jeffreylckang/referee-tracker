@@ -17,10 +17,10 @@ export default function DetailsView() {
           <h1 className={styles.pageTitle}>About the Data</h1>
           <p className={styles.lead}>
             This project collects every individual foul call made in NBA games and maps each one
-            to the referee who called it, the player who committed it, and the game it occurred in.
-            The goal is to surface patterns — which referees call the most fouls, which players get
-            called on the most, and whether those patterns hold across seasons, game types, or
-            specific foul categories.
+            to the referee who called it, the player who committed it, the player who drew it, and
+            the game it occurred in. The goal is to surface patterns — which referees call the most
+            fouls, which players get called on the most, which players draw the most fouls, and
+            whether those patterns hold across seasons, game types, or specific foul categories.
           </p>
         </section>
 
@@ -87,11 +87,10 @@ export default function DetailsView() {
         <section className={styles.section}>
           <h2 className={styles.sectionTitle}>Limitations</h2>
           <p className={styles.lead}>
-            Foul calls are three-sided. A player who commits many fouls could be there because they genuinely
-            play aggressively, because certain referees have a pattern of calling fouls on them, or because
-            the player they're guarding has a favorable whistle — drawing a lot of fouls from that referee.
-            Similarly, a player who draws many fouls might be a skilled foul-drawer, or might just be guarded
-            by players who foul a lot. High counts show patterns in the data; they don't explain the cause.
+            Foul calls are three-sided: a defender playing aggressively, an offensive player skilled at
+            drawing fouls, and a referee with a tendency to call them — all three affect when the whistle
+            blows. The data here surfaces patterns and relationships between these three sides, but it
+            can't tell you which one is driving what you're seeing.
           </p>
         </section>
 
