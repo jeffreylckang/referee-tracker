@@ -262,7 +262,7 @@ function periodLabel(p) {
 }
 
 function RefereePanel({ data }) {
-  const { referee, top_players, top_players_drawn, foul_breakdown, period_breakdown } = data
+  const { referee, top_players, top_players_drawn, foul_breakdown, period_breakdown, crew_chief_games } = data
   const total = period_breakdown?.reduce((s, p) => s + p.count, 0) || 0
   return (
     <>
@@ -270,6 +270,11 @@ function RefereePanel({ data }) {
         <span className={styles.dotReferee} />
         <h2>{referee.official_name}</h2>
       </div>
+      {crew_chief_games != null && (
+        <Section title="Crew chief">
+          <Row label="Games as crew chief" value={crew_chief_games} />
+        </Section>
+      )}
       <Section title="By quarter">
         {period_breakdown?.map(p => (
           <Row key={p.period} label={periodLabel(p.period)}

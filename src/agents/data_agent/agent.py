@@ -18,7 +18,7 @@ import os
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timedelta, timezone
 import requests
-from database import init_db, insert_game, insert_foul_events, insert_players, insert_referees
+from database import init_db, insert_game, insert_foul_events, insert_players, insert_referees, insert_game_officials
 from transform import transform_game, build_officials_lookup
 
 CDN_BASE        = "https://cdn.nba.com/static/json/liveData"
@@ -183,13 +183,23 @@ def extract_game_meta(game_id, boxscore):
     date_raw = game.get("gameEt", game.get("gameTimeUTC", ""))
     game_date = date_raw[:10] if date_raw else None  # "YYYY-MM-DD"
 
+    home = game["homeTeam"]
+    away = game["awayTeam"]
+    home_score = home.get("score")
+    away_score = away.get("score")
+    if home_score is not None and away_score is not None and home_score != away_score:
+        winner_tricode = home["teamTricode"] if home_score > away_score else away["teamTricode"]
+    else:
+        winner_tricode = None
+
     return {
         "game_id":           game_id,
-        "away_team_tricode": game["awayTeam"]["teamTricode"],
-        "home_team_tricode": game["homeTeam"]["teamTricode"],
+        "away_team_tricode": away["teamTricode"],
+        "home_team_tricode": home["teamTricode"],
         "game_date":         game_date,
         "season":            season,
         "playoff_round":     ROUND_NAMES.get(round_id),
+        "winner_tricode":    winner_tricode,
     }
 
 
@@ -227,12 +237,14 @@ def extract_players(records):
 
 
 def extract_referees(boxscore):
-    """Build referee registry entries from boxscore officials."""
+    """Build referee registry entries and game_officials entries from boxscore officials."""
     officials = boxscore["game"].get("officials", [])
-    return [
-        {"official_id": o["personId"], "official_name": o["name"]}
-        for o in officials
-    ]
+    referees       = []
+    game_officials = []
+    for o in officials:
+        referees.append({"official_id": o["personId"], "official_name": o["name"]})
+        game_officials.append({"official_id": o["personId"], "assignment": o.get("assignment", "")})
+    return referees, game_officials
 
 
 # ---------------------------------------------------------------------------
@@ -303,7 +315,7 @@ def run(game_ids, db_path, dry_run=False):
         records, errors, team_fouls = transform_game(actions, game_id, officials_lookup)
         game_meta                   = extract_game_meta(game_id, boxscore)
         players                     = extract_players(records)
-        referees                    = extract_referees(boxscore)
+        referees, game_officials    = extract_referees(boxscore)
 
         matchup = f"{game_meta['away_team_tricode']}@{game_meta['home_team_tricode']}"
         print(f"  {game_id}  {matchup:<10}  fouls={len(records)}  team_fouls={team_fouls}  errors={len(errors)}")
@@ -311,6 +323,7 @@ def run(game_ids, db_path, dry_run=False):
         if not dry_run:
             insert_game(conn, game_meta)
             insert_referees(conn, referees)
+            insert_game_officials(conn, game_id, game_officials)
             insert_players(conn, players)
             insert_foul_events(conn, records)
             conn.commit()

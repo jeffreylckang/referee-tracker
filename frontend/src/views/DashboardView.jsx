@@ -400,7 +400,7 @@ function FoulTable({ foul_breakdown }) {
 }
 
 function RefereeDetail({ data, season, summary }) {
-  const { referee, top_players, top_players_drawn, foul_breakdown, period_breakdown, season_trend, fouls_per_game } = data
+  const { referee, top_players, top_players_drawn, foul_breakdown, period_breakdown, season_trend, fouls_per_game, crew_chief_games, crew_chief_by_season } = data
 
   return (
     <div className={styles.detailInner}>
@@ -423,6 +423,27 @@ function RefereeDetail({ data, season, summary }) {
       {season_trend?.length > 1 && (
         <Section title="Fouls called per game officiated, by season">
           <SeasonChart season_trend={season_trend} note="Fouls this referee called divided by the number of games they officiated that season." />
+        </Section>
+      )}
+
+      {crew_chief_by_season?.length > 0 && (
+        <Section title={`Crew chief appearances${crew_chief_games != null ? ' — ' + crew_chief_games + ' total' : ''}`}>
+          <table className={styles.table}>
+            <thead>
+              <tr>
+                <th>Season</th>
+                <th className={styles.num}>Games as Crew Chief</th>
+              </tr>
+            </thead>
+            <tbody>
+              {crew_chief_by_season.map(r => (
+                <tr key={r.season}>
+                  <td>{r.season}</td>
+                  <td className={styles.num}>{r.games_as_crew_chief}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </Section>
       )}
 
@@ -631,7 +652,7 @@ function PlayerDetail({ data, season, summary }) {
 }
 
 function TeamDetail({ data, season, summary }) {
-  const { team_tricode, top_referees, foul_breakdown, period_breakdown, season_trend, fouls_per_game } = data
+  const { team_tricode, top_referees, foul_breakdown, period_breakdown, season_trend, fouls_per_game, referee_win_loss } = data
 
   return (
     <div className={styles.detailInner}>
@@ -689,6 +710,35 @@ function TeamDetail({ data, season, summary }) {
           </tbody>
         </table>
       </Section>
+
+      {referee_win_loss?.length > 0 && (
+        <Section title="Team record when officiated by… (all-time)">
+          <div className={styles.scrollTableWrap}>
+            <table className={styles.table}>
+              <thead>
+                <tr>
+                  <th>Referee</th>
+                  <th className={styles.num}>W</th>
+                  <th className={styles.num}>L</th>
+                  <th className={styles.num}>Games</th>
+                  <th className={styles.num}>Win%</th>
+                </tr>
+              </thead>
+              <tbody>
+                {referee_win_loss.map(r => (
+                  <tr key={r.official_id}>
+                    <td>{r.official_name}</td>
+                    <td className={styles.num}>{r.wins}</td>
+                    <td className={styles.num}>{r.losses}</td>
+                    <td className={styles.num}>{r.games_reffed}</td>
+                    <td className={styles.num}>{r.win_pct != null ? (r.win_pct * 100).toFixed(1) + '%' : '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Section>
+      )}
     </div>
   )
 }

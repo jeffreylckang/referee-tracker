@@ -219,7 +219,7 @@ function EntityCard({ type, data }) {
   if (!data || data.detail) return null
 
   if (type === 'referees') {
-    const { referee, top_players, top_players_drawn, foul_breakdown, period_breakdown, games_worked, fouls_per_game } = data
+    const { referee, top_players, top_players_drawn, foul_breakdown, period_breakdown, games_worked, fouls_per_game, crew_chief_games, crew_chief_by_season } = data
     if (!referee || !foul_breakdown) return null
     const total = foul_breakdown.reduce((s, f) => s + f.count, 0)
     return (
@@ -232,12 +232,33 @@ function EntityCard({ type, data }) {
               {total.toLocaleString()} fouls
               {games_worked != null && <span className={styles.cardMeta}> · {games_worked} games worked</span>}
               {fouls_per_game != null && <span className={styles.cardMeta}> · {fouls_per_game} fouls per game</span>}
+              {crew_chief_games != null && <span className={styles.cardMeta}> · {crew_chief_games} as crew chief</span>}
             </p>
           </div>
         </div>
         <Section title="Foul breakdown"><FoulTable rows={foul_breakdown} /></Section>
         {period_breakdown?.length > 0 && (
           <Section title="By quarter"><PeriodTable rows={period_breakdown} /></Section>
+        )}
+        {crew_chief_by_season?.length > 0 && (
+          <Section title="Crew chief appearances by season">
+            <table className={styles.table}>
+              <thead>
+                <tr>
+                  <th>Season</th>
+                  <th className={styles.num}>Games as Crew Chief</th>
+                </tr>
+              </thead>
+              <tbody>
+                {crew_chief_by_season.map(r => (
+                  <tr key={r.season}>
+                    <td>{r.season}</td>
+                    <td className={styles.num}>{r.games_as_crew_chief}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </Section>
         )}
         <Section title="Players called for the most fouls by this referee">
           <RelList items={top_players.slice(0, 3)} nameKey="fouler_player_name" sub="fouler_team_tricode" countKey="total_fouls" />
@@ -287,7 +308,7 @@ function EntityCard({ type, data }) {
   }
 
   // teams
-  const { team_tricode, top_referees, foul_breakdown, period_breakdown, games_played, fouls_per_game } = data
+  const { team_tricode, top_referees, foul_breakdown, period_breakdown, games_played, fouls_per_game, referee_win_loss } = data
   if (!team_tricode || !foul_breakdown) return null
   const total = foul_breakdown.reduce((s, f) => s + f.count, 0)
   return (
@@ -310,6 +331,32 @@ function EntityCard({ type, data }) {
       <Section title="Referees who called the most fouls on this team">
         <RelList items={top_referees.slice(0, 3)} nameKey="official_name" />
       </Section>
+      {referee_win_loss?.length > 0 && (
+        <Section title="Record when officiated by… (all-time)">
+          <table className={styles.table}>
+            <thead>
+              <tr>
+                <th>Referee</th>
+                <th className={styles.num}>W</th>
+                <th className={styles.num}>L</th>
+                <th className={styles.num}>GP</th>
+                <th className={styles.num}>Win%</th>
+              </tr>
+            </thead>
+            <tbody>
+              {referee_win_loss.slice(0, 10).map(r => (
+                <tr key={r.official_id}>
+                  <td>{r.official_name}</td>
+                  <td className={styles.num}>{r.wins}</td>
+                  <td className={styles.num}>{r.losses}</td>
+                  <td className={styles.num}>{r.games_reffed}</td>
+                  <td className={styles.num}>{r.win_pct != null ? (r.win_pct * 100).toFixed(1) + '%' : '—'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </Section>
+      )}
     </div>
   )
 }

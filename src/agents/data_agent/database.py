@@ -36,8 +36,27 @@ def init_db(db_path=None):
             home_team_tricode TEXT NOT NULL,
             game_date         TEXT,
             season            TEXT,
-            playoff_round     TEXT
+            playoff_round     TEXT,
+            winner_tricode    TEXT
         )
+    """)
+
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS game_officials (
+            game_id     TEXT    NOT NULL,
+            official_id INTEGER NOT NULL,
+            assignment  TEXT    NOT NULL,
+            PRIMARY KEY (game_id, official_id),
+            FOREIGN KEY (game_id) REFERENCES games(game_id)
+        )
+    """)
+    cur.execute("""
+        CREATE INDEX IF NOT EXISTS idx_game_officials_official_id
+            ON game_officials(official_id)
+    """)
+    cur.execute("""
+        CREATE INDEX IF NOT EXISTS idx_game_officials_assignment
+            ON game_officials(assignment)
     """)
 
     cur.execute("""
@@ -123,16 +142,29 @@ def init_db(db_path=None):
 
 
 def insert_game(conn, game):
-    """Insert a game record. Skips if game_id already exists."""
+    """Insert a game record. Updates winner_tricode if the row already exists."""
     cur = conn.cursor()
     cur.execute("""
         INSERT INTO games
-            (game_id, away_team_tricode, home_team_tricode, game_date, season, playoff_round)
+            (game_id, away_team_tricode, home_team_tricode, game_date, season, playoff_round, winner_tricode)
         VALUES
             (%(game_id)s, %(away_team_tricode)s, %(home_team_tricode)s,
-             %(game_date)s, %(season)s, %(playoff_round)s)
-        ON CONFLICT (game_id) DO NOTHING
+             %(game_date)s, %(season)s, %(playoff_round)s, %(winner_tricode)s)
+        ON CONFLICT (game_id) DO UPDATE SET winner_tricode = EXCLUDED.winner_tricode
     """, game)
+    cur.close()
+
+
+def insert_game_officials(conn, game_id, officials):
+    """Insert game_officials records. Skips duplicates."""
+    if not officials:
+        return
+    cur = conn.cursor()
+    execute_values(cur, """
+        INSERT INTO game_officials (game_id, official_id, assignment)
+        VALUES %s
+        ON CONFLICT (game_id, official_id) DO NOTHING
+    """, [(game_id, o["official_id"], o["assignment"]) for o in officials])
     cur.close()
 
 

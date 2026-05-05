@@ -795,13 +795,41 @@ def get_team(
     entity_stats = cur.fetchone()
     gp = entity_stats["games_played"] if entity_stats else 0
 
+    # Win/loss record by referee — all-time, no season/game_type filter
+    cur.execute("""
+        SELECT
+            go.official_id,
+            MAX(r.official_name)                                        AS official_name,
+            COUNT(*)                                                    AS games_reffed,
+            SUM(CASE WHEN g.winner_tricode = %(team_tricode)s THEN 1 ELSE 0 END) AS wins,
+            SUM(CASE WHEN g.winner_tricode IS NOT NULL
+                      AND g.winner_tricode != %(team_tricode)s THEN 1 ELSE 0 END) AS losses
+        FROM game_officials go
+        JOIN games g ON g.game_id = go.game_id
+        LEFT JOIN referees r ON r.official_id = go.official_id
+        WHERE (g.home_team_tricode = %(team_tricode)s OR g.away_team_tricode = %(team_tricode)s)
+          AND go.assignment IN ('OFFICIAL1', 'OFFICIAL2', 'OFFICIAL3')
+        GROUP BY go.official_id
+        ORDER BY
+            CASE WHEN COUNT(*) > 0
+                 THEN SUM(CASE WHEN g.winner_tricode = %(team_tricode)s THEN 1 ELSE 0 END)::float / COUNT(*)
+                 ELSE 0 END DESC,
+            games_reffed DESC
+    """, {"team_tricode": team_tricode})
+    referee_win_loss = []
+    for row in cur.fetchall():
+        r = dict(row)
+        r["win_pct"] = round(r["wins"] / r["games_reffed"], 3) if r["games_reffed"] else None
+        referee_win_loss.append(r)
+
     cur.close()
     conn.close()
     result = {"team_tricode": team_tricode, "top_referees": top_referees, "foul_breakdown": foul_breakdown,
               "period_breakdown": period_breakdown,
               "season_trend": season_trend,
               "games_played": gp,
-              "fouls_per_game": round(entity_stats["total_fouls"] / gp, 2) if gp else None}
+              "fouls_per_game": round(entity_stats["total_fouls"] / gp, 2) if gp else None,
+              "referee_win_loss": referee_win_loss}
     cache_set(cache_key, result)
     return result
 
@@ -1042,6 +1070,33 @@ def get_referee(
     entity_stats = cur.fetchone()
     gw = entity_stats["games_worked"] if entity_stats else 0
 
+    # Crew chief: total count respecting current season/game_type filters
+    cur.execute(f"""
+        SELECT COUNT(*) AS crew_chief_games
+        FROM game_officials go
+        JOIN games g ON g.game_id = go.game_id
+        WHERE go.official_id = %(official_id)s
+          AND go.assignment = 'OFFICIAL1'
+          AND (%(season)s IS NULL OR g.season = %(season)s)
+          {GAME_TYPE_CLAUSE}
+    """, params)
+    cc_row = cur.fetchone()
+    crew_chief_games = cc_row["crew_chief_games"] if cc_row else 0
+
+    # Crew chief by season — game_type filter applies, season filter does not
+    cur.execute(f"""
+        SELECT g.season, COUNT(*) AS games_as_crew_chief
+        FROM game_officials go
+        JOIN games g ON g.game_id = go.game_id
+        WHERE go.official_id = %(official_id)s
+          AND go.assignment = 'OFFICIAL1'
+          AND g.season IS NOT NULL
+          {GAME_TYPE_CLAUSE}
+        GROUP BY g.season
+        ORDER BY g.season
+    """, params)
+    crew_chief_by_season = [dict(r) for r in cur.fetchall()]
+
     cur.close()
     conn.close()
     result = {"referee": dict(referee), "top_players": top_players,
@@ -1049,7 +1104,9 @@ def get_referee(
               "foul_breakdown": foul_breakdown, "period_breakdown": period_breakdown,
               "season_trend": season_trend,
               "games_worked": gw,
-              "fouls_per_game": round(entity_stats["total_fouls"] / gw, 2) if gw else None}
+              "fouls_per_game": round(entity_stats["total_fouls"] / gw, 2) if gw else None,
+              "crew_chief_games": crew_chief_games,
+              "crew_chief_by_season": crew_chief_by_season}
     cache_set(cache_key, result)
     return result
 
