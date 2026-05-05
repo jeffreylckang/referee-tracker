@@ -219,7 +219,7 @@ function EntityCard({ type, data }) {
   if (!data || data.detail) return null
 
   if (type === 'referees') {
-    const { referee, top_players, top_players_drawn, foul_breakdown, period_breakdown, games_worked, fouls_per_game, crew_chief_games, crew_chief_by_season } = data
+    const { referee, top_players, top_players_drawn, foul_breakdown, period_breakdown, games_worked, fouls_per_game, crew_chief_games } = data
     if (!referee || !foul_breakdown) return null
     const total = foul_breakdown.reduce((s, f) => s + f.count, 0)
     return (
@@ -239,26 +239,6 @@ function EntityCard({ type, data }) {
         <Section title="Foul breakdown"><FoulTable rows={foul_breakdown} /></Section>
         {period_breakdown?.length > 0 && (
           <Section title="By quarter"><PeriodTable rows={period_breakdown} /></Section>
-        )}
-        {crew_chief_by_season?.length > 0 && (
-          <Section title="Crew chief appearances by season">
-            <table className={styles.table}>
-              <thead>
-                <tr>
-                  <th>Season</th>
-                  <th className={styles.num}>Games as Crew Chief</th>
-                </tr>
-              </thead>
-              <tbody>
-                {crew_chief_by_season.map(r => (
-                  <tr key={r.season}>
-                    <td>{r.season}</td>
-                    <td className={styles.num}>{r.games_as_crew_chief}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </Section>
         )}
         <Section title="Players called for the most fouls by this referee">
           <RelList items={top_players.slice(0, 3)} nameKey="fouler_player_name" sub="fouler_team_tricode" countKey="total_fouls" />
@@ -340,6 +320,7 @@ function EntityCard({ type, data }) {
                 <th className={styles.num}>W</th>
                 <th className={styles.num}>L</th>
                 <th className={styles.num}>GP</th>
+                <th className={styles.num}>Crew Chief</th>
                 <th className={styles.num}>Win%</th>
               </tr>
             </thead>
@@ -350,6 +331,7 @@ function EntityCard({ type, data }) {
                   <td className={styles.num}>{r.wins}</td>
                   <td className={styles.num}>{r.losses}</td>
                   <td className={styles.num}>{r.games_reffed}</td>
+                  <td className={styles.num}>{r.crew_chief_games || 0}</td>
                   <td className={styles.num}>{r.win_pct != null ? (r.win_pct * 100).toFixed(1) + '%' : '—'}</td>
                 </tr>
               ))}

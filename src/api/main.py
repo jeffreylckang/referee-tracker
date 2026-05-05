@@ -801,6 +801,7 @@ def get_team(
             go.official_id,
             MAX(r.official_name)                                        AS official_name,
             COUNT(*)                                                    AS games_reffed,
+            SUM(CASE WHEN go.assignment = 'OFFICIAL1' THEN 1 ELSE 0 END) AS crew_chief_games,
             SUM(CASE WHEN g.winner_tricode = %(team_tricode)s THEN 1 ELSE 0 END) AS wins,
             SUM(CASE WHEN g.winner_tricode IS NOT NULL
                       AND g.winner_tricode != %(team_tricode)s THEN 1 ELSE 0 END) AS losses

@@ -400,7 +400,7 @@ function FoulTable({ foul_breakdown }) {
 }
 
 function RefereeDetail({ data, season, summary }) {
-  const { referee, top_players, top_players_drawn, foul_breakdown, period_breakdown, season_trend, fouls_per_game, crew_chief_games, crew_chief_by_season } = data
+  const { referee, top_players, top_players_drawn, foul_breakdown, period_breakdown, season_trend, fouls_per_game, crew_chief_games } = data
 
   return (
     <div className={styles.detailInner}>
@@ -412,6 +412,9 @@ function RefereeDetail({ data, season, summary }) {
         </div>
       </div>
       <DeviationControl fpg={fouls_per_game} season_trend={season_trend} leagueAvg={summary?.avg_fouls_per_game} label="fouls called/game" />
+      {crew_chief_games != null && (
+        <p className={styles.sub} style={{ marginBottom: '0.75rem' }}>{crew_chief_games} game{crew_chief_games !== 1 ? 's' : ''} as crew chief</p>
+      )}
 
       <div className={styles.sectionRow}>
         <Section title="Foul breakdown"><FoulTable foul_breakdown={foul_breakdown} /></Section>
@@ -423,27 +426,6 @@ function RefereeDetail({ data, season, summary }) {
       {season_trend?.length > 1 && (
         <Section title="Fouls called per game officiated, by season">
           <SeasonChart season_trend={season_trend} note="Fouls this referee called divided by the number of games they officiated that season." />
-        </Section>
-      )}
-
-      {crew_chief_by_season?.length > 0 && (
-        <Section title={`Crew chief appearances${crew_chief_games != null ? ' — ' + crew_chief_games + ' total' : ''}`}>
-          <table className={styles.table}>
-            <thead>
-              <tr>
-                <th>Season</th>
-                <th className={styles.num}>Games as Crew Chief</th>
-              </tr>
-            </thead>
-            <tbody>
-              {crew_chief_by_season.map(r => (
-                <tr key={r.season}>
-                  <td>{r.season}</td>
-                  <td className={styles.num}>{r.games_as_crew_chief}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
         </Section>
       )}
 
@@ -721,6 +703,7 @@ function TeamDetail({ data, season, summary }) {
                   <th className={styles.num}>W</th>
                   <th className={styles.num}>L</th>
                   <th className={styles.num}>Games</th>
+                  <th className={styles.num}>Crew Chief</th>
                   <th className={styles.num}>Win%</th>
                 </tr>
               </thead>
@@ -731,6 +714,7 @@ function TeamDetail({ data, season, summary }) {
                     <td className={styles.num}>{r.wins}</td>
                     <td className={styles.num}>{r.losses}</td>
                     <td className={styles.num}>{r.games_reffed}</td>
+                    <td className={styles.num}>{r.crew_chief_games || 0}</td>
                     <td className={styles.num}>{r.win_pct != null ? (r.win_pct * 100).toFixed(1) + '%' : '—'}</td>
                   </tr>
                 ))}
