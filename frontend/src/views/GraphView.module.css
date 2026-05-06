@@ -160,3 +160,83 @@
   color: var(--text-muted);
   font-variant-numeric: tabular-nums;
 }
+
+/* ─── Badge cards ─── */
+.badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.badge {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 10px;
+  border-radius: 7px;
+  background: rgba(45, 212, 191, 0.07);
+  border: 1px solid rgba(45, 212, 191, 0.25);
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.badgeNameRow {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.badgeName {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #2dd4bf;
+}
+.badgeStat {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.4;
+}
+.badgeTooltipWrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+.badgeTooltipIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  font-size: 9px;
+  font-weight: 800;
+  cursor: help;
+  background: rgba(255,255,255,0.10);
+  color: var(--text-muted);
+  line-height: 1;
+  flex-shrink: 0;
+}
+.badgeTooltipText {
+  display: none;
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 0;
+  background: #1c2128;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 8px 10px;
+  font-size: 11px;
+  font-weight: 400;
+  line-height: 1.5;
+  color: var(--text);
+  white-space: normal;
+  width: 220px;
+  text-transform: none;
+  letter-spacing: 0;
+  z-index: 200;
+  pointer-events: none;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.6);
+}
+.badgeTooltipWrap:hover .badgeTooltipText {
+  display: block;
+}

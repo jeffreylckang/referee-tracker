@@ -261,8 +261,30 @@ function periodLabel(p) {
   return `OT${p - 4 > 1 ? p - 4 : ''}`
 }
 
+function BadgeCards({ badges }) {
+  if (!badges?.length) return null
+  return (
+    <div className={styles.badges}>
+      {badges.map(b => (
+        <div key={b.id} className={styles.badge}>
+          <div className={styles.badgeNameRow}>
+            <span className={styles.badgeName}>{b.label}</span>
+            {b.description && (
+              <span className={styles.badgeTooltipWrap}>
+                <span className={styles.badgeTooltipIcon}>?</span>
+                <span className={styles.badgeTooltipText}>{b.description}</span>
+              </span>
+            )}
+          </div>
+          {b.stat && <span className={styles.badgeStat}>{b.stat}</span>}
+        </div>
+      ))}
+    </div>
+  )
+}
+
 function RefereePanel({ data }) {
-  const { referee, top_players, top_players_drawn, foul_breakdown, period_breakdown, crew_chief_games } = data
+  const { referee, top_players, top_players_drawn, foul_breakdown, period_breakdown, crew_chief_games, badges } = data
   const total = period_breakdown?.reduce((s, p) => s + p.count, 0) || 0
   return (
     <>
@@ -270,9 +292,10 @@ function RefereePanel({ data }) {
         <span className={styles.dotReferee} />
         <h2>{referee.official_name}</h2>
       </div>
-      {crew_chief_games != null && (
-        <Section title="Crew chief">
-          <Row label="Games as crew chief" value={crew_chief_games} />
+      {(crew_chief_games != null || badges?.length > 0) && (
+        <Section title="Overview">
+          {crew_chief_games != null && <Row label="Games as crew chief" value={crew_chief_games} />}
+          <BadgeCards badges={badges} />
         </Section>
       )}
       <Section title="By quarter">
@@ -301,7 +324,7 @@ function RefereePanel({ data }) {
 }
 
 function PlayerPanel({ data }) {
-  const { player, top_referees, top_referees_drawn, foul_breakdown, period_breakdown } = data
+  const { player, top_referees, top_referees_drawn, foul_breakdown, period_breakdown, badges } = data
   const total = period_breakdown?.reduce((s, p) => s + p.count, 0) || 0
   return (
     <>
@@ -310,6 +333,11 @@ function PlayerPanel({ data }) {
         <h2>{player.player_name}</h2>
         {player.team_tricode && <span className={styles.team}>{player.team_tricode}</span>}
       </div>
+      {badges?.length > 0 && (
+        <Section title="Overview">
+          <BadgeCards badges={badges} />
+        </Section>
+      )}
       <Section title="By quarter">
         {period_breakdown?.map(p => (
           <Row key={p.period} label={periodLabel(p.period)}
