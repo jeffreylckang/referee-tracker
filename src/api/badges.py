@@ -93,6 +93,12 @@ def _cohens_h(p1, p2):
     return abs(2 * math.asin(math.sqrt(p1)) - 2 * math.asin(math.sqrt(p2)))
 
 
+def _p_label(pv):
+    if pv < 0.001: return "p < 0.001"
+    if pv < 0.01:  return "p < 0.01"
+    return "p < 0.05"
+
+
 def _pct_diff(a, b):
     return round((a - b) / b * 100, 1) if b else 0
 
@@ -160,7 +166,7 @@ def compute_referee_badges(cur, official_id, season, game_type):
                 "description": (
                     f"Calls significantly more fouls per game than a typical referee. "
                     f"Welch's two-sample t-test, Bonferroni correction. "
-                    f"p = {pv:.4f} (α = {alpha:.4f}), Cohen's d = {d:.2f}."
+                    f"{_p_label(pv)}, Cohen's d = {d:.2f}."
                 ),
             })
         else:
@@ -170,7 +176,7 @@ def compute_referee_badges(cur, official_id, season, game_type):
                 "description": (
                     f"Calls significantly fewer fouls per game than a typical referee. "
                     f"Welch's two-sample t-test, Bonferroni correction. "
-                    f"p = {pv:.4f} (α = {alpha:.4f}), Cohen's d = {d:.2f}."
+                    f"{_p_label(pv)}, Cohen's d = {d:.2f}."
                 ),
             })
 
@@ -210,7 +216,7 @@ def compute_referee_badges(cur, official_id, season, game_type):
             "description": (
                 f"Technical fouls make up a significantly higher share of their calls than the league average. "
                 f"One-tailed z-test for proportions, Bonferroni correction. "
-                f"p = {pv:.4f} (α = {alpha:.4f}), Cohen's h = {h:.2f}."
+                f"{_p_label(pv)}, Cohen's h = {h:.2f}."
             ),
         })
 
@@ -250,7 +256,7 @@ def compute_referee_badges(cur, official_id, season, game_type):
             "description": (
                 f"Calls a significantly higher share of fouls in Q4 than the league average. "
                 f"One-tailed z-test for proportions, Bonferroni correction. "
-                f"p = {pv:.4f} (α = {alpha:.4f}), Cohen's h = {h:.2f}."
+                f"{_p_label(pv)}, Cohen's h = {h:.2f}."
             ),
         })
 
@@ -352,7 +358,7 @@ def compute_referee_badges(cur, official_id, season, game_type):
                     f"{ft_label} fouls make up a significantly {'higher' if direction == 'high' else 'lower'} "
                     f"share of their calls than the league average. "
                     f"Two-tailed z-test for proportions, Bonferroni correction. "
-                    f"p = {pv:.4f} (α = {alpha:.4f}), Cohen's h = {h:.2f}."
+                    f"{_p_label(pv)}, Cohen's h = {h:.2f}."
                 ),
             })
 
@@ -407,7 +413,7 @@ def compute_player_badges(cur, player_id, season, game_type):
             "description": (
                 f"Draws significantly more fouls per game than the average player. "
                 f"Welch's two-sample t-test, Bonferroni correction. "
-                f"p = {pv:.4f} (α = {alpha:.4f}), Cohen's d = {d:.2f}."
+                f"{_p_label(pv)}, Cohen's d = {d:.2f}."
             ),
         })
 
@@ -448,7 +454,7 @@ def compute_player_badges(cur, player_id, season, game_type):
             "description": (
                 f"Commits significantly more fouls per game than the average player. "
                 f"Welch's two-sample t-test, Bonferroni correction. "
-                f"p = {pv:.4f} (α = {alpha:.4f}), Cohen's d = {d:.2f}."
+                f"{_p_label(pv)}, Cohen's d = {d:.2f}."
             ),
         })
 
@@ -489,7 +495,7 @@ def compute_player_badges(cur, player_id, season, game_type):
             "description": (
                 f"Draws a significantly higher share of fouls in Q4 than the average player. "
                 f"One-tailed z-test for proportions, Bonferroni correction. "
-                f"p = {pv:.4f} (α = {alpha:.4f}), Cohen's h = {h:.2f}."
+                f"{_p_label(pv)}, Cohen's h = {h:.2f}."
             ),
         })
 
@@ -544,7 +550,7 @@ def compute_team_badges(cur, team_tricode, season, game_type):
                 "description": (
                     f"Called for significantly more fouls per game than the average team. "
                     f"Welch's two-sample t-test, Bonferroni correction. "
-                    f"p = {pv:.4f} (α = {alpha:.4f}), Cohen's d = {d:.2f}."
+                    f"{_p_label(pv)}, Cohen's d = {d:.2f}."
                 ),
             })
         else:
@@ -554,7 +560,7 @@ def compute_team_badges(cur, team_tricode, season, game_type):
                 "description": (
                     f"Called for significantly fewer fouls per game than the average team. "
                     f"Welch's two-sample t-test, Bonferroni correction. "
-                    f"p = {pv:.4f} (α = {alpha:.4f}), Cohen's d = {d:.2f}."
+                    f"{_p_label(pv)}, Cohen's d = {d:.2f}."
                 ),
             })
 
@@ -591,7 +597,7 @@ def compute_team_badges(cur, team_tricode, season, game_type):
                 "description": (
                     f"Gets whistled significantly more at home than on the road. "
                     f"Welch's two-sample t-test, Bonferroni correction. "
-                    f"p = {pv:.4f} (α = {alpha:.4f}), Cohen's d = {d:.2f}."
+                    f"{_p_label(pv)}, Cohen's d = {d:.2f}."
                 ),
             })
         else:
@@ -601,7 +607,7 @@ def compute_team_badges(cur, team_tricode, season, game_type):
                 "description": (
                     f"Gets whistled significantly more on the road than at home. "
                     f"Welch's two-sample t-test, Bonferroni correction. "
-                    f"p = {pv:.4f} (α = {alpha:.4f}), Cohen's d = {d:.2f}."
+                    f"{_p_label(pv)}, Cohen's d = {d:.2f}."
                 ),
             })
 
