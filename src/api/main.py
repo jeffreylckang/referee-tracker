@@ -19,11 +19,16 @@ Run locally:
 """
 
 import time
+import json
+from concurrent.futures import ThreadPoolExecutor
 from fastapi import FastAPI, Query, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from typing import Optional
 from .db import get_conn
 from .badges import compute_referee_badges, compute_player_badges, compute_team_badges
+
+# Shared pool for concurrent badge computation — one thread per request at most
+_badge_pool = ThreadPoolExecutor(max_workers=6)
 
 # ---------------------------------------------------------------------------
 # Simple in-memory cache — avoids hitting the DB on every request
@@ -43,20 +48,93 @@ def cache_get(key: str):
 def cache_set(key: str, data):
     _cache[key] = {"data": data, "ts": time.time()}
 
+
+# ---------------------------------------------------------------------------
+# DB-persisted badge cache — survives restarts; TTL 6 hours
+# ---------------------------------------------------------------------------
+
+def badge_cache_get(conn, entity_type: str, entity_id, season, game_type):
+    cur = conn.cursor()
+    cur.execute("""
+        SELECT badges, banner_stats FROM badge_cache
+        WHERE entity_type = %s AND entity_id = %s
+          AND season = %s AND game_type = %s
+          AND computed_at > NOW() - INTERVAL '6 hours'
+    """, (entity_type, str(entity_id), season or '', game_type or ''))
+    row = cur.fetchone()
+    cur.close()
+    if row:
+        return row['badges'], row['banner_stats']
+    return None, None
+
+
+def badge_cache_set(conn, entity_type: str, entity_id, season, game_type, badges, banner_stats):
+    try:
+        cur = conn.cursor()
+        cur.execute("""
+            INSERT INTO badge_cache (entity_type, entity_id, season, game_type, badges, banner_stats)
+            VALUES (%s, %s, %s, %s, %s::jsonb, %s::jsonb)
+            ON CONFLICT (entity_type, entity_id, season, game_type)
+            DO UPDATE SET badges       = EXCLUDED.badges,
+                          banner_stats = EXCLUDED.banner_stats,
+                          computed_at  = NOW()
+        """, (entity_type, str(entity_id), season or '', game_type or '',
+              json.dumps(badges), json.dumps(banner_stats)))
+        conn.commit()
+        cur.close()
+    except Exception:
+        pass
+
+
+def _badges_with_conn(compute_fn, *args):
+    """Run a badge compute function with its own DB connection."""
+    conn = get_conn()
+    cur  = conn.cursor()
+    try:
+        return compute_fn(cur, *args)
+    except Exception:
+        return [], {}
+    finally:
+        cur.close()
+        conn.close()
+
+
 app = FastAPI(title="Referee Tracker API")
 
 
 @app.on_event("startup")
-async def warmup_cache():
-    """Pre-warm common list queries so first Dashboard load is fast."""
-    import threading, concurrent.futures
+async def startup():
+    """Create badge_cache table and pre-warm common list queries."""
+    import threading
+    # Ensure badge_cache table exists
+    try:
+        conn = get_conn()
+        cur  = conn.cursor()
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS badge_cache (
+                entity_type  TEXT NOT NULL,
+                entity_id    TEXT NOT NULL,
+                season       TEXT NOT NULL DEFAULT '',
+                game_type    TEXT NOT NULL DEFAULT '',
+                badges       JSONB NOT NULL DEFAULT '[]',
+                banner_stats JSONB NOT NULL DEFAULT '{}',
+                computed_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                PRIMARY KEY (entity_type, entity_id, season, game_type)
+            )
+        """)
+        conn.commit()
+        cur.close()
+        conn.close()
+    except Exception:
+        pass
+    # Pre-warm common list queries in background
     def _call(fn):
         try: fn()
         except Exception: pass
     def _warm():
         fns = [get_filters, get_referees, get_players, get_teams, get_summary]
-        with concurrent.futures.ThreadPoolExecutor(max_workers=5) as ex:
-            list(ex.map(_call, fns))
+        for fn in fns:
+            _badge_pool.submit(_call, fn)
     threading.Thread(target=_warm, daemon=True).start()
 
 app.add_middleware(
@@ -824,10 +902,10 @@ def get_team(
         r["win_pct"] = round(r["wins"] / r["games_reffed"], 3) if r["games_reffed"] else None
         referee_win_loss.append(r)
 
-    try:
-        badges, banner_stats = compute_team_badges(cur, team_tricode, season, game_type)
-    except Exception:
-        badges, banner_stats = [], {}
+    badges, banner_stats = badge_cache_get(conn, 'team', team_tricode, season, game_type)
+    if badges is None:
+        badges, banner_stats = _badges_with_conn(compute_team_badges, team_tricode, season, game_type)
+        badge_cache_set(conn, 'team', team_tricode, season, game_type, badges, banner_stats)
 
     cur.close()
     conn.close()
@@ -866,6 +944,11 @@ def get_referee(
     referee = cur.fetchone()
     if not referee:
         raise HTTPException(status_code=404, detail="Referee not found")
+
+    # Launch badge computation concurrently with main queries
+    badges, banner_stats = badge_cache_get(conn, 'referee', official_id, season, game_type)
+    badge_future = None if badges is not None else \
+        _badge_pool.submit(_badges_with_conn, compute_referee_badges, official_id, season, game_type)
 
     params = {"official_id": official_id, "season": season,
               "game_type": game_type, "foul_detail": foul_detail}
@@ -1106,10 +1189,9 @@ def get_referee(
     """, params)
     crew_chief_by_season = [dict(r) for r in cur.fetchall()]
 
-    try:
-        badges, banner_stats = compute_referee_badges(cur, official_id, season, game_type)
-    except Exception:
-        badges, banner_stats = [], {}
+    if badge_future is not None:
+        badges, banner_stats = badge_future.result()
+        badge_cache_set(conn, 'referee', official_id, season, game_type, badges, banner_stats)
 
     cur.close()
     conn.close()
@@ -1150,6 +1232,11 @@ def get_player(
     player = cur.fetchone()
     if not player:
         raise HTTPException(status_code=404, detail="Player not found")
+
+    # Launch badge computation concurrently with main queries
+    badges, banner_stats = badge_cache_get(conn, 'player', player_id, season, game_type)
+    badge_future = None if badges is not None else \
+        _badge_pool.submit(_badges_with_conn, compute_player_badges, player_id, season, game_type)
 
     # Use most recent team from foul_events (players table is static at ingest time)
     cur.execute("""
@@ -1328,10 +1415,9 @@ def get_player(
     entity_stats = cur.fetchone()
     gp = entity_stats["games_played"] if entity_stats else 0
 
-    try:
-        badges, banner_stats = compute_player_badges(cur, player_id, season, game_type)
-    except Exception:
-        badges, banner_stats = [], {}
+    if badge_future is not None:
+        badges, banner_stats = badge_future.result()
+        badge_cache_set(conn, 'player', player_id, season, game_type, badges, banner_stats)
 
     cur.close()
     conn.close()
