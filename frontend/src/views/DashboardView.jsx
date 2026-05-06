@@ -270,6 +270,43 @@ function LeaderCard({ accent, label, name, sub }) {
   )
 }
 
+function OverviewBanner({ stats, badges }) {
+  if (!stats?.length && !badges?.length) return null
+  return (
+    <div className={styles.overviewBanner}>
+      {stats?.length > 0 && (
+        <div className={styles.bannerStats}>
+          {stats.map((s, i) => (
+            <div key={i} className={styles.statCard}>
+              <span className={styles.statCardLabel}>{s.label}</span>
+              <span className={styles.statCardValue}>{s.value}</span>
+              {s.sub && <span className={styles.statCardSub}>{s.sub}</span>}
+              {s.diff != null && (
+                <span className={`${styles.statCardDiff} ${s.diff > 0 ? styles.statCardDiffPos : styles.statCardDiffNeg}`}>
+                  {s.diff > 0 ? '+' : ''}{s.diff}%
+                </span>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+      {badges?.length > 0 && (
+        <div className={styles.badges}>
+          {badges.map(b => (
+            <div key={b.id} className={`${styles.badge} ${b.direction === 'high' ? styles.badgeHigh : b.direction === 'low' ? styles.badgeLow : styles.badgeNeutral}`}>
+              {b.label}
+              <span className={styles.badgeTooltipWrap}>
+                <span className={styles.badgeTooltipIcon}>?</span>
+                <span className={styles.badgeTooltipText}>{b.description}</span>
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 function DeviationControl({ fpg, season_trend, leagueAvg, totalFoulsKey = 'total_fouls', label = 'fouls/game' }) {
   const [mode, setMode] = useState('league')
 
@@ -400,7 +437,7 @@ function FoulTable({ foul_breakdown }) {
 }
 
 function RefereeDetail({ data, season, summary }) {
-  const { referee, top_players, top_players_drawn, foul_breakdown, period_breakdown, season_trend, fouls_per_game, crew_chief_games } = data
+  const { referee, top_players, top_players_drawn, foul_breakdown, period_breakdown, season_trend, crew_chief_games, badges, banner_stats } = data
 
   return (
     <div className={styles.detailInner}>
@@ -411,10 +448,21 @@ function RefereeDetail({ data, season, summary }) {
           {season && <p className={styles.sub}>{season}</p>}
         </div>
       </div>
-      <DeviationControl fpg={fouls_per_game} season_trend={season_trend} leagueAvg={summary?.avg_fouls_per_game} label="fouls called/game" />
-      {crew_chief_games != null && (
-        <p className={styles.sub} style={{ marginBottom: '0.75rem' }}>{crew_chief_games} game{crew_chief_games !== 1 ? 's' : ''} as crew chief</p>
-      )}
+      <OverviewBanner
+        stats={[
+          banner_stats?.fouls_per_game != null ? {
+            label: 'Fouls / Game',
+            value: banner_stats.fouls_per_game,
+            sub: `vs ${banner_stats.league_avg} league avg`,
+            diff: banner_stats.pct_diff,
+          } : null,
+          crew_chief_games != null ? {
+            label: 'Games as Crew Chief',
+            value: crew_chief_games,
+          } : null,
+        ].filter(Boolean)}
+        badges={badges}
+      />
 
       <div className={styles.sectionRow}>
         <Section title="Foul breakdown"><FoulTable foul_breakdown={foul_breakdown} /></Section>
@@ -509,7 +557,8 @@ function RefereeDetail({ data, season, summary }) {
 function PlayerDetail({ data, season, summary }) {
   const { player, top_referees, top_referees_drawn, drawn_breakdown,
           drawn_season_trend, fouls_drawn, drawn_per_game,
-          foul_breakdown, period_breakdown, season_trend, fouls_per_game } = data
+          foul_breakdown, period_breakdown, season_trend, fouls_per_game,
+          badges, banner_stats } = data
 
   return (
     <div className={styles.detailInner}>
@@ -521,19 +570,23 @@ function PlayerDetail({ data, season, summary }) {
         </div>
       </div>
 
-      <div className={styles.twoColDeviation}>
-        <div>
-          <p className={styles.deviationLabel}>Fouls Called</p>
-          <DeviationControl fpg={fouls_per_game} season_trend={season_trend}
-            leagueAvg={summary?.avg_player_fpg} label="fouls called/game" />
-        </div>
-        <div>
-          <p className={styles.deviationLabel}>Fouls Drawn</p>
-          <DeviationControl fpg={drawn_per_game} season_trend={drawn_season_trend}
-            leagueAvg={summary?.avg_player_drawn_fpg} totalFoulsKey="total_fouls_drawn"
-            label="fouls drawn/game" />
-        </div>
-      </div>
+      <OverviewBanner
+        stats={[
+          banner_stats?.drawn_per_game != null ? {
+            label: 'Fouls Drawn / Game',
+            value: banner_stats.drawn_per_game,
+            sub: `vs ${banner_stats.league_avg_drawn} league avg`,
+            diff: banner_stats.drawn_pct_diff,
+          } : null,
+          banner_stats?.committed_per_game != null ? {
+            label: 'Fouls Committed / Game',
+            value: banner_stats.committed_per_game,
+            sub: `vs ${banner_stats.league_avg_committed} league avg`,
+            diff: banner_stats.committed_pct_diff,
+          } : null,
+        ].filter(Boolean)}
+        badges={badges}
+      />
 
       <div className={styles.sectionRow}>
         <Section title="Foul breakdown"><FoulTable foul_breakdown={foul_breakdown} /></Section>
@@ -634,7 +687,7 @@ function PlayerDetail({ data, season, summary }) {
 }
 
 function TeamDetail({ data, season, summary }) {
-  const { team_tricode, top_referees, foul_breakdown, period_breakdown, season_trend, fouls_per_game, referee_win_loss } = data
+  const { team_tricode, top_referees, foul_breakdown, period_breakdown, season_trend, fouls_per_game, referee_win_loss, badges, banner_stats } = data
 
   return (
     <div className={styles.detailInner}>
@@ -645,7 +698,17 @@ function TeamDetail({ data, season, summary }) {
           <p className={styles.sub}>{[team_tricode, season].filter(Boolean).join(' · ')}</p>
         </div>
       </div>
-      <DeviationControl fpg={fouls_per_game} season_trend={season_trend} leagueAvg={summary?.avg_team_fpg} />
+      <OverviewBanner
+        stats={[
+          banner_stats?.fouls_per_game != null ? {
+            label: 'Fouls / Game',
+            value: banner_stats.fouls_per_game,
+            sub: `vs ${banner_stats.league_avg} league avg`,
+            diff: banner_stats.pct_diff,
+          } : null,
+        ].filter(Boolean)}
+        badges={badges}
+      />
 
       <div className={styles.sectionRow}>
         <Section title="Foul breakdown"><FoulTable foul_breakdown={foul_breakdown} /></Section>

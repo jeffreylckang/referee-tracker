@@ -23,6 +23,7 @@ from fastapi import FastAPI, Query, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from typing import Optional
 from .db import get_conn
+from .badges import compute_referee_badges, compute_player_badges, compute_team_badges
 
 # ---------------------------------------------------------------------------
 # Simple in-memory cache — avoids hitting the DB on every request
@@ -823,6 +824,11 @@ def get_team(
         r["win_pct"] = round(r["wins"] / r["games_reffed"], 3) if r["games_reffed"] else None
         referee_win_loss.append(r)
 
+    try:
+        badges, banner_stats = compute_team_badges(cur, team_tricode, season, game_type)
+    except Exception:
+        badges, banner_stats = [], {}
+
     cur.close()
     conn.close()
     result = {"team_tricode": team_tricode, "top_referees": top_referees, "foul_breakdown": foul_breakdown,
@@ -830,7 +836,9 @@ def get_team(
               "season_trend": season_trend,
               "games_played": gp,
               "fouls_per_game": round(entity_stats["total_fouls"] / gp, 2) if gp else None,
-              "referee_win_loss": referee_win_loss}
+              "referee_win_loss": referee_win_loss,
+              "badges": badges,
+              "banner_stats": banner_stats}
     cache_set(cache_key, result)
     return result
 
@@ -1098,6 +1106,11 @@ def get_referee(
     """, params)
     crew_chief_by_season = [dict(r) for r in cur.fetchall()]
 
+    try:
+        badges, banner_stats = compute_referee_badges(cur, official_id, season, game_type)
+    except Exception:
+        badges, banner_stats = [], {}
+
     cur.close()
     conn.close()
     result = {"referee": dict(referee), "top_players": top_players,
@@ -1107,7 +1120,9 @@ def get_referee(
               "games_worked": gw,
               "fouls_per_game": round(entity_stats["total_fouls"] / gw, 2) if gw else None,
               "crew_chief_games": crew_chief_games,
-              "crew_chief_by_season": crew_chief_by_season}
+              "crew_chief_by_season": crew_chief_by_season,
+              "badges": badges,
+              "banner_stats": banner_stats}
     cache_set(cache_key, result)
     return result
 
@@ -1313,6 +1328,11 @@ def get_player(
     entity_stats = cur.fetchone()
     gp = entity_stats["games_played"] if entity_stats else 0
 
+    try:
+        badges, banner_stats = compute_player_badges(cur, player_id, season, game_type)
+    except Exception:
+        badges, banner_stats = [], {}
+
     cur.close()
     conn.close()
     result = {"player": player_dict, "top_referees": top_referees,
@@ -1324,6 +1344,8 @@ def get_player(
               "foul_breakdown": foul_breakdown, "period_breakdown": period_breakdown,
               "season_trend": season_trend,
               "games_played": gp,
-              "fouls_per_game": round(entity_stats["total_fouls"] / gp, 2) if gp else None}
+              "fouls_per_game": round(entity_stats["total_fouls"] / gp, 2) if gp else None,
+              "badges": badges,
+              "banner_stats": banner_stats}
     cache_set(cache_key, result)
     return result
