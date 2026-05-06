@@ -270,35 +270,25 @@ function LeaderCard({ accent, label, name, sub }) {
   )
 }
 
-function OverviewBanner({ stats, badges }) {
-  if (!stats?.length && !badges?.length) return null
+function OverviewBanner({ meta, badges }) {
+  if (!meta && !badges?.length) return null
   return (
     <div className={styles.overviewBanner}>
-      {stats?.length > 0 && (
-        <div className={styles.bannerStats}>
-          {stats.map((s, i) => (
-            <div key={i} className={styles.statCard}>
-              <span className={styles.statCardLabel}>{s.label}</span>
-              <span className={styles.statCardValue}>{s.value}</span>
-              {s.sub && <span className={styles.statCardSub}>{s.sub}</span>}
-              {s.diff != null && (
-                <span className={`${styles.statCardDiff} ${s.diff > 0 ? styles.statCardDiffPos : styles.statCardDiffNeg}`}>
-                  {s.diff > 0 ? '+' : ''}{s.diff}%
-                </span>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
+      {meta && <p className={styles.bannerMeta}>{meta}</p>}
       {badges?.length > 0 && (
         <div className={styles.badges}>
           {badges.map(b => (
-            <div key={b.id} className={`${styles.badge} ${b.direction === 'high' ? styles.badgeHigh : b.direction === 'low' ? styles.badgeLow : styles.badgeNeutral}`}>
-              {b.label}
-              <span className={styles.badgeTooltipWrap}>
-                <span className={styles.badgeTooltipIcon}>?</span>
-                <span className={styles.badgeTooltipText}>{b.description}</span>
-              </span>
+            <div key={b.id} className={styles.badge}>
+              <div className={styles.badgeNameRow}>
+                <span className={styles.badgeName}>{b.label}</span>
+                {b.description && (
+                  <span className={styles.badgeTooltipWrap}>
+                    <span className={styles.badgeTooltipIcon}>?</span>
+                    <span className={styles.badgeTooltipText}>{b.description}</span>
+                  </span>
+                )}
+              </div>
+              {b.stat && <span className={styles.badgeStat}>{b.stat}</span>}
             </div>
           ))}
         </div>
@@ -449,18 +439,7 @@ function RefereeDetail({ data, season, summary }) {
         </div>
       </div>
       <OverviewBanner
-        stats={[
-          banner_stats?.fouls_per_game != null ? {
-            label: 'Fouls / Game',
-            value: banner_stats.fouls_per_game,
-            sub: `vs ${banner_stats.league_avg} league avg`,
-            diff: banner_stats.pct_diff,
-          } : null,
-          crew_chief_games != null ? {
-            label: 'Games as Crew Chief',
-            value: crew_chief_games,
-          } : null,
-        ].filter(Boolean)}
+        meta={crew_chief_games != null ? `Games as Crew Chief: ${crew_chief_games.toLocaleString()}` : null}
         badges={badges}
       />
 
@@ -570,23 +549,7 @@ function PlayerDetail({ data, season, summary }) {
         </div>
       </div>
 
-      <OverviewBanner
-        stats={[
-          banner_stats?.drawn_per_game != null ? {
-            label: 'Fouls Drawn / Game',
-            value: banner_stats.drawn_per_game,
-            sub: `vs ${banner_stats.league_avg_drawn} league avg`,
-            diff: banner_stats.drawn_pct_diff,
-          } : null,
-          banner_stats?.committed_per_game != null ? {
-            label: 'Fouls Committed / Game',
-            value: banner_stats.committed_per_game,
-            sub: `vs ${banner_stats.league_avg_committed} league avg`,
-            diff: banner_stats.committed_pct_diff,
-          } : null,
-        ].filter(Boolean)}
-        badges={badges}
-      />
+      <OverviewBanner badges={badges} />
 
       <div className={styles.sectionRow}>
         <Section title="Foul breakdown"><FoulTable foul_breakdown={foul_breakdown} /></Section>
@@ -698,17 +661,7 @@ function TeamDetail({ data, season, summary }) {
           <p className={styles.sub}>{[team_tricode, season].filter(Boolean).join(' · ')}</p>
         </div>
       </div>
-      <OverviewBanner
-        stats={[
-          banner_stats?.fouls_per_game != null ? {
-            label: 'Fouls / Game',
-            value: banner_stats.fouls_per_game,
-            sub: `vs ${banner_stats.league_avg} league avg`,
-            diff: banner_stats.pct_diff,
-          } : null,
-        ].filter(Boolean)}
-        badges={badges}
-      />
+      <OverviewBanner badges={badges} />
 
       <div className={styles.sectionRow}>
         <Section title="Foul breakdown"><FoulTable foul_breakdown={foul_breakdown} /></Section>

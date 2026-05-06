@@ -136,17 +136,19 @@ def compute_referee_badges(cur, official_id, season, game_type):
         if mean_ref > mean_lg:
             badges.append({
                 "id": "high_whistler", "label": "High Whistler", "direction": "high",
+                "stat": f"{mean_ref:.2f} vs {mean_lg:.2f} league avg ({pct:+.1f}%)",
                 "description": (
-                    f"Calls {mean_ref:.1f} fouls/game vs the league average of {mean_lg:.1f} "
-                    f"({pct:+.1f}%). Welch's t-test with Bonferroni correction (α = {alpha:.4f})."
+                    f"Calls significantly more fouls per game than a typical referee. "
+                    f"Welch's two-sample t-test, Bonferroni correction (α = {alpha:.4f})."
                 ),
             })
         else:
             badges.append({
                 "id": "quiet_whistle", "label": "Quiet Whistle", "direction": "low",
+                "stat": f"{mean_ref:.2f} vs {mean_lg:.2f} league avg ({pct:+.1f}%)",
                 "description": (
-                    f"Calls {mean_ref:.1f} fouls/game vs the league average of {mean_lg:.1f} "
-                    f"({pct:+.1f}%). Welch's t-test with Bonferroni correction (α = {alpha:.4f})."
+                    f"Calls significantly fewer fouls per game than a typical referee. "
+                    f"Welch's two-sample t-test, Bonferroni correction (α = {alpha:.4f})."
                 ),
             })
 
@@ -181,8 +183,9 @@ def compute_referee_badges(cur, official_id, season, game_type):
         l = lg_tech  / lg_tot  * 100 if lg_tot  else 0
         badges.append({
             "id": "tech_magnet", "label": "Tech Magnet", "direction": "high",
+            "stat": f"{r:.1f}% of calls vs {l:.1f}% league avg",
             "description": (
-                f"Technical fouls make up {r:.1f}% of their calls vs the league average of {l:.1f}%. "
+                f"Technical fouls make up a significantly higher share of their calls than the league average. "
                 f"One-tailed z-test for proportions, Bonferroni correction (α = {alpha:.4f})."
             ),
         })
@@ -218,8 +221,9 @@ def compute_referee_badges(cur, official_id, season, game_type):
         l = lg_q4  / lg_reg  * 100 if lg_reg  else 0
         badges.append({
             "id": "crunch_time", "label": "Crunch Time Caller", "direction": "high",
+            "stat": f"{r:.1f}% in Q4 vs {l:.1f}% league avg",
             "description": (
-                f"{r:.1f}% of regulation fouls called in Q4 vs league average of {l:.1f}%. "
+                f"Calls a significantly higher share of fouls in Q4 than the league average. "
                 f"One-tailed z-test for proportions, Bonferroni correction (α = {alpha:.4f})."
             ),
         })
@@ -251,19 +255,21 @@ def compute_referee_badges(cur, official_id, season, game_type):
         if mean_ref_h > mean_lg_h:
             badges.append({
                 "id": "home_bias", "label": "Home Bias", "direction": "neutral",
+                "stat": f"{mean_ref_h*100:.1f}% home fouls vs {mean_lg_h*100:.1f}% league avg",
                 "description": (
-                    f"Calls {mean_ref_h*100:.1f}% of fouls on the home team per game vs the league "
-                    f"average of {mean_lg_h*100:.1f}%. Harder on home teams than a typical referee. "
-                    f"Game-level Welch's t-test, Bonferroni correction (α = {alpha:.4f})."
+                    f"Calls a significantly higher share of fouls on the home team than a typical referee. "
+                    f"Game-level Welch's t-test (each game's home-foul proportion is one observation), "
+                    f"Bonferroni correction (α = {alpha:.4f})."
                 ),
             })
         else:
             badges.append({
                 "id": "away_bias", "label": "Away Bias", "direction": "neutral",
+                "stat": f"{mean_ref_h*100:.1f}% home fouls vs {mean_lg_h*100:.1f}% league avg",
                 "description": (
-                    f"Calls {mean_ref_h*100:.1f}% of fouls on the home team per game vs the league "
-                    f"average of {mean_lg_h*100:.1f}%. Harder on away teams than a typical referee. "
-                    f"Game-level Welch's t-test, Bonferroni correction (α = {alpha:.4f})."
+                    f"Calls a significantly lower share of fouls on the home team than a typical referee — "
+                    f"harder on away teams. Game-level Welch's t-test (each game's home-foul proportion "
+                    f"is one observation), Bonferroni correction (α = {alpha:.4f})."
                 ),
             })
 
@@ -312,8 +318,10 @@ def compute_referee_badges(cur, official_id, season, game_type):
                 direction, suffix = "low", "Light"
             badges.append({
                 "id": f"{ft}_{direction}", "label": f"{ft_label} {suffix}", "direction": direction,
+                "stat": f"{rp:.1f}% of calls vs {lp:.1f}% league avg",
                 "description": (
-                    f"{ft_label} fouls are {rp:.1f}% of their calls vs league average of {lp:.1f}%. "
+                    f"{ft_label} fouls make up a significantly {'higher' if direction == 'high' else 'lower'} "
+                    f"share of their calls than the league average. "
                     f"Two-tailed z-test for proportions, Bonferroni correction (α = {alpha:.4f})."
                 ),
             })
@@ -364,9 +372,10 @@ def compute_player_badges(cur, player_id, season, game_type):
     if pv < alpha and mean_drawn > mean_lg_drawn:
         badges.append({
             "id": "foul_magnet", "label": "Foul Magnet", "direction": "high",
+            "stat": f"{mean_drawn:.2f} vs {mean_lg_drawn:.2f} drawn/game ({pct_drawn:+.1f}%)",
             "description": (
-                f"Draws {mean_drawn:.1f} fouls/game vs the league average of {mean_lg_drawn:.1f} "
-                f"({pct_drawn:+.1f}%). Welch's t-test, Bonferroni correction (α = {alpha:.4f})."
+                f"Draws significantly more fouls per game than the average player. "
+                f"Welch's two-sample t-test, Bonferroni correction (α = {alpha:.4f})."
             ),
         })
 
@@ -402,9 +411,10 @@ def compute_player_badges(cur, player_id, season, game_type):
     if pv < alpha and mean_comm > mean_lg_comm:
         badges.append({
             "id": "foul_trouble", "label": "Foul Trouble", "direction": "high",
+            "stat": f"{mean_comm:.2f} vs {mean_lg_comm:.2f} committed/game ({pct_comm:+.1f}%)",
             "description": (
-                f"Commits {mean_comm:.1f} fouls/game vs the league average of {mean_lg_comm:.1f} "
-                f"({pct_comm:+.1f}%). Welch's t-test, Bonferroni correction (α = {alpha:.4f})."
+                f"Commits significantly more fouls per game than the average player. "
+                f"Welch's two-sample t-test, Bonferroni correction (α = {alpha:.4f})."
             ),
         })
 
@@ -440,8 +450,9 @@ def compute_player_badges(cur, player_id, season, game_type):
         l = lg_q4  / lg_reg  * 100 if lg_reg  else 0
         badges.append({
             "id": "crunch_time_target", "label": "Crunch Time Target", "direction": "high",
+            "stat": f"{r:.1f}% drawn in Q4 vs {l:.1f}% league avg",
             "description": (
-                f"{r:.1f}% of fouls drawn occur in Q4 vs the league average of {l:.1f}%. "
+                f"Draws a significantly higher share of fouls in Q4 than the average player. "
                 f"One-tailed z-test for proportions, Bonferroni correction (α = {alpha:.4f})."
             ),
         })
@@ -492,17 +503,19 @@ def compute_team_badges(cur, team_tricode, season, game_type):
         if mean_team > mean_lg:
             badges.append({
                 "id": "most_penalized", "label": "Most Penalized", "direction": "high",
+                "stat": f"{mean_team:.2f} vs {mean_lg:.2f} league avg ({pct:+.1f}%)",
                 "description": (
-                    f"Called for {mean_team:.1f} fouls/game vs the league average of {mean_lg:.1f} "
-                    f"({pct:+.1f}%). Welch's t-test, Bonferroni correction (α = {alpha:.4f})."
+                    f"Called for significantly more fouls per game than the average team. "
+                    f"Welch's two-sample t-test, Bonferroni correction (α = {alpha:.4f})."
                 ),
             })
         else:
             badges.append({
                 "id": "least_penalized", "label": "Least Penalized", "direction": "low",
+                "stat": f"{mean_team:.2f} vs {mean_lg:.2f} league avg ({pct:+.1f}%)",
                 "description": (
-                    f"Called for {mean_team:.1f} fouls/game vs the league average of {mean_lg:.1f} "
-                    f"({pct:+.1f}%). Welch's t-test, Bonferroni correction (α = {alpha:.4f})."
+                    f"Called for significantly fewer fouls per game than the average team. "
+                    f"Welch's two-sample t-test, Bonferroni correction (α = {alpha:.4f})."
                 ),
             })
 
@@ -534,19 +547,19 @@ def compute_team_badges(cur, team_tricode, season, game_type):
         if mean_home > mean_away:
             badges.append({
                 "id": "home_disadvantage", "label": "Home Disadvantage", "direction": "high",
+                "stat": f"{mean_home:.2f} at home vs {mean_away:.2f} away",
                 "description": (
-                    f"Called for {mean_home:.1f} fouls/game at home vs {mean_away:.1f} on the road. "
-                    f"Gets whistled more at home than away. "
-                    f"Welch's t-test, Bonferroni correction (α = {alpha:.4f})."
+                    f"Gets whistled significantly more at home than on the road. "
+                    f"Welch's two-sample t-test, Bonferroni correction (α = {alpha:.4f})."
                 ),
             })
         else:
             badges.append({
                 "id": "away_disadvantage", "label": "Away Disadvantage", "direction": "high",
+                "stat": f"{mean_away:.2f} away vs {mean_home:.2f} at home",
                 "description": (
-                    f"Called for {mean_away:.1f} fouls/game on the road vs {mean_home:.1f} at home. "
-                    f"Gets whistled more away than at home. "
-                    f"Welch's t-test, Bonferroni correction (α = {alpha:.4f})."
+                    f"Gets whistled significantly more on the road than at home. "
+                    f"Welch's two-sample t-test, Bonferroni correction (α = {alpha:.4f})."
                 ),
             })
 

@@ -460,76 +460,44 @@
 .overviewBanner {
   margin-bottom: 28px;
 }
-.bannerStats {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin-bottom: 10px;
-}
-.statCard {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 8px 14px;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-.statCardLabel {
-  font-size: 10px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.07em;
+.bannerMeta {
+  font-size: 14px;
   color: var(--text-muted);
+  margin-bottom: 12px;
 }
-.statCardValue {
-  font-size: 15px;
-  font-weight: 600;
-  color: var(--text);
-}
-.statCardSub {
-  font-size: 11px;
-  color: var(--text-muted);
-}
-.statCardDiff {
-  font-size: 11px;
-  font-weight: 600;
-}
-.statCardDiffPos { color: #f97316; }
-.statCardDiffNeg { color: #38bdf8; }
 
-/* ─── Badge pills ─── */
+/* ─── Badge cards ─── */
 .badges {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 10px;
 }
 .badge {
-  display: inline-flex;
-  align-items: center;
+  display: flex;
+  flex-direction: column;
   gap: 5px;
-  padding: 4px 10px;
-  border-radius: 99px;
-  font-size: 11px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  background: rgba(45, 212, 191, 0.07);
+  border: 1px solid rgba(45, 212, 191, 0.25);
+  min-width: 0;
+}
+.badgeNameRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.badgeName {
+  font-size: 12px;
   font-weight: 700;
-  letter-spacing: 0.04em;
   text-transform: uppercase;
-  user-select: none;
+  letter-spacing: 0.05em;
+  color: #2dd4bf;
 }
-.badgeHigh {
-  background: rgba(249, 115, 22, 0.15);
-  color: #fb923c;
-  border: 1px solid rgba(249, 115, 22, 0.35);
-}
-.badgeLow {
-  background: rgba(56, 189, 248, 0.12);
-  color: #38bdf8;
-  border: 1px solid rgba(56, 189, 248, 0.3);
-}
-.badgeNeutral {
-  background: rgba(125, 133, 144, 0.15);
-  color: #94a3b8;
-  border: 1px solid rgba(125, 133, 144, 0.3);
+.badgeStat {
+  font-size: 13px;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
 }
 
 /* ─── Badge tooltip ─── */
