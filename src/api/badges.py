@@ -316,8 +316,9 @@ def compute_referee_badges(cur, official_id, season, game_type):
                 direction, suffix = "high", "Heavy"
             else:
                 direction, suffix = "low", "Light"
+            label = f"{ft_label} {suffix}" if ft != "personal" or direction == "high" else "Let 'Em Play"
             badges.append({
-                "id": f"{ft}_{direction}", "label": f"{ft_label} {suffix}", "direction": direction,
+                "id": f"{ft}_{direction}", "label": label, "direction": direction,
                 "stat": f"{rp:.1f}% of calls vs {lp:.1f}% league avg",
                 "description": (
                     f"{ft_label} fouls make up a significantly {'higher' if direction == 'high' else 'lower'} "
