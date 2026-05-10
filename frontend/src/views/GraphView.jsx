@@ -227,14 +227,12 @@ export default function GraphView() {
       refNodes[0].fx = 0; refNodes[0].fy = 0
       refNodes[0].x  = 0; refNodes[0].y  = 0
 
-      const maxCount   = playerNodes[0]?.foul_count || 1
-      const minCount   = playerNodes[playerNodes.length - 1]?.foul_count || 1
-      const countRange = Math.max(maxCount - minCount, 1)
-      const minR = 25                          // closest player (most fouls) is nearly touching the ref
-      const maxR = Math.min(W, H) * 0.44      // furthest player at ~44% of half-canvas
+      const minR = 40                          // rank 1 (most fouls) sits this far from the ref
+      const maxR = Math.min(W, H) * 0.44      // last rank sits at ~44% of half-canvas
+      const n_   = playerNodes.length
       playerNodes.forEach((n, i) => {
-        const angle  = (i / playerNodes.length) * 2 * Math.PI - Math.PI / 2
-        const t      = (maxCount - n.foul_count) / countRange  // 0 = most fouls (closest), 1 = fewest (furthest)
+        const angle  = (i / n_) * 2 * Math.PI - Math.PI / 2
+        const t      = n_ > 1 ? i / (n_ - 1) : 0   // rank 0 → minR, rank last → maxR
         const radius = minR + t * (maxR - minR)
         const px = radius * Math.cos(angle)
         const py = radius * Math.sin(angle)
