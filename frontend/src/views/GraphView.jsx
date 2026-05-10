@@ -17,8 +17,9 @@ export default function GraphView() {
   const mountRef      = useRef(null)
   const graphRef      = useRef(null)
   const dataRef       = useRef({ nodes: [], links: [] })
-  const hlNodes = useRef(new Set())   // highlighted node objects
-  const hlLinks = useRef(new Set())   // highlighted link objects
+  const hlNodes       = useRef(new Set())
+  const hlLinks       = useRef(new Set())
+  const panelAbortRef = useRef(null)
 
   const [filters,          setFilters]          = useState({ seasons: [], foul_types: [], teams: [] })
   const [refereeList,      setRefereeList]      = useState([])
@@ -125,7 +126,7 @@ export default function GraphView() {
         .linkCanvasObject((link, ctx) => {
           const src = link.source
           const tgt = link.target
-          if (!src.x || !tgt.x) return
+          if (src.x == null || tgt.x == null) return
 
           const hlActive = hlLinks.current.size > 0
           const isHl = !hlActive || hlLinks.current.has(link)
@@ -197,21 +198,30 @@ export default function GraphView() {
       })
       graphRef.current.refresh()
 
-      // Show loading state immediately, then fill in progressively
+      // Abort any previous in-flight panel requests, then show loading immediately
+      if (panelAbortRef.current) panelAbortRef.current.abort()
+      const ctrl = new AbortController()
+      panelAbortRef.current = ctrl
+      const signal = ctrl.signal
+
       const clickedNode = node
       const id = node.id.slice(2)
       setPanel({ type: node.type, data: null })
       const opts = { season: season || undefined, game_type: gameType || undefined }
       if (node.type === 'referee') {
-        fetchReferee(id, { ...opts, include_badges: false })
+        fetchReferee(id, { ...opts, include_badges: false, signal })
           .then(data => { if (selectedNodeRef.current === clickedNode) setPanel({ type: 'referee', data }) })
-        fetchReferee(id, opts)
+          .catch(() => {})
+        fetchReferee(id, { ...opts, signal })
           .then(data => { if (selectedNodeRef.current === clickedNode) setPanel({ type: 'referee', data }) })
+          .catch(() => {})
       } else {
-        fetchPlayer(id, { ...opts, include_badges: false })
+        fetchPlayer(id, { ...opts, include_badges: false, signal })
           .then(data => { if (selectedNodeRef.current === clickedNode) setPanel({ type: 'player', data }) })
-        fetchPlayer(id, opts)
+          .catch(() => {})
+        fetchPlayer(id, { ...opts, signal })
           .then(data => { if (selectedNodeRef.current === clickedNode) setPanel({ type: 'player', data }) })
+          .catch(() => {})
       }
     })
 
