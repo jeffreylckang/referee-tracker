@@ -49,13 +49,13 @@ export async function fetchPlayers({ season, game_type, foul_detail } = {}) {
   return r.json()
 }
 
-export async function fetchReferee(id, { season, game_type, foul_detail, include_badges } = {}) {
+export async function fetchReferee(id, { season, game_type, foul_detail, include_badges, signal } = {}) {
   const params = new URLSearchParams()
   if (season)               params.set('season',        season)
   if (game_type)            params.set('game_type',     game_type)
   if (foul_detail)          params.set('foul_detail',   foul_detail)
   if (include_badges === false) params.set('include_badges', 'false')
-  const r = await fetch(`${BASE}/api/referee/${id}?${params}`)
+  const r = await fetch(`${BASE}/api/referee/${id}?${params}`, { signal })
   return r.json()
 }
 
@@ -68,22 +68,22 @@ export async function fetchTeams({ season, game_type, foul_detail } = {}) {
   return r.json()
 }
 
-export async function fetchTeam(tricode, { season, game_type, foul_detail, include_badges } = {}) {
+export async function fetchTeam(tricode, { season, game_type, foul_detail, include_badges, signal } = {}) {
   const params = new URLSearchParams()
   if (season)               params.set('season',        season)
   if (game_type)            params.set('game_type',     game_type)
   if (foul_detail)          params.set('foul_detail',   foul_detail)
   if (include_badges === false) params.set('include_badges', 'false')
-  const r = await fetch(`${BASE}/api/team/${tricode}?${params}`)
+  const r = await fetch(`${BASE}/api/team/${tricode}?${params}`, { signal })
   return r.json()
 }
 
-export async function fetchPlayer(id, { season, game_type, foul_detail, include_badges } = {}) {
+export async function fetchPlayer(id, { season, game_type, foul_detail, include_badges, signal } = {}) {
   const params = new URLSearchParams()
   if (season)               params.set('season',        season)
   if (game_type)            params.set('game_type',     game_type)
   if (foul_detail)          params.set('foul_detail',   foul_detail)
   if (include_badges === false) params.set('include_badges', 'false')
-  const r = await fetch(`${BASE}/api/player/${id}?${params}`)
+  const r = await fetch(`${BASE}/api/player/${id}?${params}`, { signal })
   return r.json()
 }

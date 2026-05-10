@@ -62,37 +62,56 @@ export default function DashboardView() {
   const query = search.toLowerCase()
   const filterOpts = { season: season || undefined, game_type: gameType || undefined, foul_detail: foulDetail || undefined }
 
-  // Tracks the most-recently-clicked entity so stale responses don't overwrite newer ones
   const pendingRef = useRef(null)
+  const abortRef   = useRef(null)
+
+  function _newRequest() {
+    if (abortRef.current) abortRef.current.abort()
+    const ctrl = new AbortController()
+    abortRef.current = ctrl
+    return ctrl.signal
+  }
 
   function selectReferee(r) {
-    const id = r.official_id
-    const key = `referee:${id}`
+    const id     = r.official_id
+    const key    = `referee:${id}`
+    const signal = _newRequest()
     pendingRef.current = key
-    fetchReferee(id, { ...filterOpts, include_badges: false })
+    setDetail({ type: 'referee', data: null, _id: id })
+    fetchReferee(id, { ...filterOpts, include_badges: false, signal })
       .then(data => { if (pendingRef.current === key) setDetail({ type: 'referee', data, _id: id }) })
-    fetchReferee(id, filterOpts)
+      .catch(() => {})
+    fetchReferee(id, { ...filterOpts, signal })
       .then(data => { if (pendingRef.current === key) setDetail({ type: 'referee', data, _id: id }) })
+      .catch(() => {})
   }
 
   function selectPlayer(p) {
-    const id = p.player_id
-    const key = `player:${id}`
+    const id     = p.player_id
+    const key    = `player:${id}`
+    const signal = _newRequest()
     pendingRef.current = key
-    fetchPlayer(id, { ...filterOpts, include_badges: false })
+    setDetail({ type: 'player', data: null, _id: id })
+    fetchPlayer(id, { ...filterOpts, include_badges: false, signal })
       .then(data => { if (pendingRef.current === key) setDetail({ type: 'player', data, _id: id }) })
-    fetchPlayer(id, filterOpts)
+      .catch(() => {})
+    fetchPlayer(id, { ...filterOpts, signal })
       .then(data => { if (pendingRef.current === key) setDetail({ type: 'player', data, _id: id }) })
+      .catch(() => {})
   }
 
   function selectTeam(t) {
-    const id = t.team_tricode
-    const key = `team:${id}`
+    const id     = t.team_tricode
+    const key    = `team:${id}`
+    const signal = _newRequest()
     pendingRef.current = key
-    fetchTeam(id, { ...filterOpts, include_badges: false })
+    setDetail({ type: 'team', data: null, _id: id })
+    fetchTeam(id, { ...filterOpts, include_badges: false, signal })
       .then(data => { if (pendingRef.current === key) setDetail({ type: 'team', data, _id: id }) })
-    fetchTeam(id, filterOpts)
+      .catch(() => {})
+    fetchTeam(id, { ...filterOpts, signal })
       .then(data => { if (pendingRef.current === key) setDetail({ type: 'team', data, _id: id }) })
+      .catch(() => {})
   }
 
   const filteredReferees = referees.filter(r => r.official_name.toLowerCase().includes(query))
@@ -204,6 +223,8 @@ export default function DashboardView() {
         <div className={styles.detailScroll}>
           {!detail ? (
             <div className={styles.empty}>Select a {tab === 'referees' ? 'referee' : tab === 'players' ? 'player' : 'team'} to see details</div>
+          ) : !detail.data ? (
+            <div className={styles.empty}>Loading…</div>
           ) : detail.type === 'referee' ? (
             <RefereeDetail data={detail.data} season={season} summary={summary} />
           ) : detail.type === 'player' ? (
