@@ -175,7 +175,7 @@ export default function GraphView() {
 
     // Re-register click handler every load so it closes over current season/gameType
     graphRef.current.onNodeClick(node => {
-      if (selectedNodeRef.current === node) {
+      if (selectedNodeRef.current?.id === node.id) {
         selectedNodeRef.current = null
         hlNodes.current.clear()
         hlLinks.current.clear()
@@ -204,24 +204,24 @@ export default function GraphView() {
       panelAbortRef.current = ctrl
       const signal = ctrl.signal
 
-      const clickedNode = node
+      const clickedId = node.id
       const id = node.id.slice(2)
       setPanel({ type: node.type, data: null })
       const opts = { season: season || undefined, game_type: gameType || undefined }
       if (node.type === 'referee') {
         fetchReferee(id, { ...opts, include_badges: false, signal })
-          .then(data => { if (selectedNodeRef.current === clickedNode) setPanel({ type: 'referee', data }) })
-          .catch(() => {})
+          .then(data => { if (selectedNodeRef.current?.id === clickedId) setPanel({ type: 'referee', data }) })
+          .catch(e => { if (e.name !== 'AbortError') console.error(e) })
         fetchReferee(id, { ...opts, signal })
-          .then(data => { if (selectedNodeRef.current === clickedNode) setPanel({ type: 'referee', data }) })
-          .catch(() => {})
+          .then(data => { if (selectedNodeRef.current?.id === clickedId) setPanel({ type: 'referee', data }) })
+          .catch(e => { if (e.name !== 'AbortError') console.error(e) })
       } else {
         fetchPlayer(id, { ...opts, include_badges: false, signal })
-          .then(data => { if (selectedNodeRef.current === clickedNode) setPanel({ type: 'player', data }) })
-          .catch(() => {})
+          .then(data => { if (selectedNodeRef.current?.id === clickedId) setPanel({ type: 'player', data }) })
+          .catch(e => { if (e.name !== 'AbortError') console.error(e) })
         fetchPlayer(id, { ...opts, signal })
-          .then(data => { if (selectedNodeRef.current === clickedNode) setPanel({ type: 'player', data }) })
-          .catch(() => {})
+          .then(data => { if (selectedNodeRef.current?.id === clickedId) setPanel({ type: 'player', data }) })
+          .catch(e => { if (e.name !== 'AbortError') console.error(e) })
       }
     })
 

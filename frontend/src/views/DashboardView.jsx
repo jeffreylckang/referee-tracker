@@ -51,12 +51,10 @@ export default function DashboardView() {
     setDetail(null)
     const opts = { season: season || undefined, game_type: gameType || undefined, foul_detail: foulDetail || undefined }
     fetchSummary(opts).then(setSummary)
-    Promise.all([fetchReferees(opts), fetchPlayers(opts), fetchTeams(opts)]).then(([r, p, t]) => {
-      setReferees(r)
-      setPlayers(p)
-      setTeams(t)
-      setLoading(false)
-    })
+    // Load each list independently — referees clear the spinner as soon as they arrive
+    fetchReferees(opts).then(r => { setReferees(r); setLoading(false) })
+    fetchPlayers(opts).then(p => setPlayers(p))
+    fetchTeams(opts).then(t => setTeams(t))
   }, [season, gameType, foulDetail])
 
   const query = search.toLowerCase()
