@@ -1,14 +1,14 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
-  --bg:        #0d1117;
-  --surface:   #161b22;
-  --border:    #30363d;
-  --accent:    #f97316;
-  --referee:   #f97316;
-  --player:    #38bdf8;
-  --text:      #e6edf3;
-  --text-muted:#7d8590;
+  --bg:        #07091a;
+  --surface:   #0d1228;
+  --border:    #1e2d52;
+  --accent:    #3b82f6;
+  --referee:   #f59e0b;
+  --player:    #93c5fd;
+  --text:      #dce8fa;
+  --text-muted:#6b84aa;
 }
 
 body {

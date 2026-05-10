@@ -780,10 +780,11 @@ def get_teams(
 
 @app.get("/api/team/{team_tricode}")
 def get_team(
-    team_tricode: str,
-    season:       Optional[str] = Query(None),
-    game_type:    Optional[str] = Query(None),
-    foul_detail:  Optional[str] = Query(None),
+    team_tricode:   str,
+    season:         Optional[str] = Query(None),
+    game_type:      Optional[str] = Query(None),
+    foul_detail:    Optional[str] = Query(None),
+    include_badges: bool           = Query(True),
 ):
     cache_key = f"team:{team_tricode}:{season}:{game_type}:{foul_detail}"
     cached = cache_get(cache_key)
@@ -902,10 +903,12 @@ def get_team(
         r["win_pct"] = round(r["wins"] / r["games_reffed"], 3) if r["games_reffed"] else None
         referee_win_loss.append(r)
 
-    badges, banner_stats = badge_cache_get(conn, 'team', team_tricode, season, game_type)
-    if badges is None:
-        badges, banner_stats = _badges_with_conn(compute_team_badges, team_tricode, season, game_type)
-        badge_cache_set(conn, 'team', team_tricode, season, game_type, badges, banner_stats)
+    badges, banner_stats = None, None
+    if include_badges:
+        badges, banner_stats = badge_cache_get(conn, 'team', team_tricode, season, game_type)
+        if badges is None:
+            badges, banner_stats = _badges_with_conn(compute_team_badges, team_tricode, season, game_type)
+            badge_cache_set(conn, 'team', team_tricode, season, game_type, badges, banner_stats)
 
     cur.close()
     conn.close()
@@ -917,7 +920,8 @@ def get_team(
               "referee_win_loss": referee_win_loss,
               "badges": badges,
               "banner_stats": banner_stats}
-    cache_set(cache_key, result)
+    if include_badges:
+        cache_set(cache_key, result)
     return result
 
 
@@ -927,10 +931,11 @@ def get_team(
 
 @app.get("/api/referee/{official_id}")
 def get_referee(
-    official_id: int,
-    season:      Optional[str] = Query(None),
-    game_type:   Optional[str] = Query(None),
-    foul_detail: Optional[str] = Query(None),
+    official_id:    int,
+    season:         Optional[str] = Query(None),
+    game_type:      Optional[str] = Query(None),
+    foul_detail:    Optional[str] = Query(None),
+    include_badges: bool           = Query(True),
 ):
     cache_key = f"referee:{official_id}:{season}:{game_type}:{foul_detail}"
     cached = cache_get(cache_key)
@@ -946,9 +951,12 @@ def get_referee(
         raise HTTPException(status_code=404, detail="Referee not found")
 
     # Launch badge computation concurrently with main queries
-    badges, banner_stats = badge_cache_get(conn, 'referee', official_id, season, game_type)
-    badge_future = None if badges is not None else \
-        _badge_pool.submit(_badges_with_conn, compute_referee_badges, official_id, season, game_type)
+    badges, banner_stats = None, None
+    badge_future = None
+    if include_badges:
+        badges, banner_stats = badge_cache_get(conn, 'referee', official_id, season, game_type)
+        if badges is None:
+            badge_future = _badge_pool.submit(_badges_with_conn, compute_referee_badges, official_id, season, game_type)
 
     params = {"official_id": official_id, "season": season,
               "game_type": game_type, "foul_detail": foul_detail}
@@ -1205,7 +1213,8 @@ def get_referee(
               "crew_chief_by_season": crew_chief_by_season,
               "badges": badges,
               "banner_stats": banner_stats}
-    cache_set(cache_key, result)
+    if include_badges:
+        cache_set(cache_key, result)
     return result
 
 
@@ -1215,10 +1224,11 @@ def get_referee(
 
 @app.get("/api/player/{player_id}")
 def get_player(
-    player_id:   int,
-    season:      Optional[str] = Query(None),
-    game_type:   Optional[str] = Query(None),
-    foul_detail: Optional[str] = Query(None),
+    player_id:      int,
+    season:         Optional[str] = Query(None),
+    game_type:      Optional[str] = Query(None),
+    foul_detail:    Optional[str] = Query(None),
+    include_badges: bool           = Query(True),
 ):
     cache_key = f"player:{player_id}:{season}:{game_type}:{foul_detail}"
     cached = cache_get(cache_key)
@@ -1234,9 +1244,12 @@ def get_player(
         raise HTTPException(status_code=404, detail="Player not found")
 
     # Launch badge computation concurrently with main queries
-    badges, banner_stats = badge_cache_get(conn, 'player', player_id, season, game_type)
-    badge_future = None if badges is not None else \
-        _badge_pool.submit(_badges_with_conn, compute_player_badges, player_id, season, game_type)
+    badges, banner_stats = None, None
+    badge_future = None
+    if include_badges:
+        badges, banner_stats = badge_cache_get(conn, 'player', player_id, season, game_type)
+        if badges is None:
+            badge_future = _badge_pool.submit(_badges_with_conn, compute_player_badges, player_id, season, game_type)
 
     # Use most recent team from foul_events (players table is static at ingest time)
     cur.execute("""
@@ -1433,5 +1446,6 @@ def get_player(
               "fouls_per_game": round(entity_stats["total_fouls"] / gp, 2) if gp else None,
               "badges": badges,
               "banner_stats": banner_stats}
-    cache_set(cache_key, result)
+    if include_badges:
+        cache_set(cache_key, result)
     return result

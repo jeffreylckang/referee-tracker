@@ -285,24 +285,28 @@ def compute_referee_badges(cur, official_id, season, game_type):
     pv, mean_ref_h, mean_lg_h = _welch(n1, m1, v1, n2, m2, v2)
     d = _cohens_d(mean_ref_h, mean_lg_h, n1, v1, n2, v2)
     if pv < alpha and d >= MIN_D:
-        if mean_ref_h > mean_lg_h:
+        home_pct = round(mean_ref_h * 100, 1)
+        lg_pct   = round(mean_lg_h  * 100, 1)
+        if mean_ref_h < mean_lg_h:
+            # Fewer fouls on home team → more on visitors → home team benefits
             badges.append({
-                "id": "home_bias", "label": "Home Bias", "direction": "neutral",
-                "stat": f"{mean_ref_h*100:.1f}% home fouls vs {mean_lg_h*100:.1f}% league avg",
+                "id": "home_cookin", "label": "Home Cookin'", "direction": "neutral",
+                "stat": f"{home_pct}% of fouls on home team vs {lg_pct}% league avg",
                 "description": (
-                    f"Calls a significantly higher share of fouls on the home team than a typical referee. "
-                    f"Game-level Welch's t-test (each game's home-foul proportion is one observation), "
-                    f"Bonferroni correction. p = {pv:.4f} (α = {alpha:.4f}), Cohen's d = {d:.2f}."
+                    f"Calls a significantly lower share of fouls on the home team than a typical referee — "
+                    f"visiting teams get the short end. Game-level Welch's t-test, Bonferroni correction. "
+                    f"{_p_label(pv)}, Cohen's d = {d:.2f}."
                 ),
             })
         else:
+            # More fouls on home team → visiting teams get the benefit
             badges.append({
-                "id": "away_bias", "label": "Away Bias", "direction": "neutral",
-                "stat": f"{mean_ref_h*100:.1f}% home fouls vs {mean_lg_h*100:.1f}% league avg",
+                "id": "visitor_friendly", "label": "Visitor Friendly", "direction": "neutral",
+                "stat": f"{home_pct}% of fouls on home team vs {lg_pct}% league avg",
                 "description": (
-                    f"Calls a significantly lower share of fouls on the home team than a typical referee — "
-                    f"harder on away teams. Game-level Welch's t-test (each game's home-foul proportion "
-                    f"is one observation), Bonferroni correction. p = {pv:.4f} (α = {alpha:.4f}), Cohen's d = {d:.2f}."
+                    f"Calls a significantly higher share of fouls on the home team than a typical referee — "
+                    f"road teams get the benefit. Game-level Welch's t-test, Bonferroni correction. "
+                    f"{_p_label(pv)}, Cohen's d = {d:.2f}."
                 ),
             })
 

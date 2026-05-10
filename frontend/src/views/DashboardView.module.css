@@ -132,7 +132,7 @@
   gap: 3px;
   padding: 10px 14px;
   border-left: 3px solid;
-  background: rgba(230, 237, 243, 0.04);
+  background: rgba(220, 232, 250, 0.04);
   border-radius: 0 6px 6px 0;
   flex: 1;
 }
@@ -174,7 +174,7 @@
 }
 
 .bannerCollapsed:hover {
-  background: rgba(230, 237, 243, 0.05);
+  background: rgba(220, 232, 250, 0.05);
 }
 
 .bannerChip {
@@ -249,7 +249,7 @@
   color: var(--text);
   padding-bottom: 10px;
   margin-bottom: 16px;
-  border-bottom: 1px solid rgba(230, 237, 243, 0.1);
+  border-bottom: 1px solid rgba(220, 232, 250, 0.1);
 }
 
 /* ─── Table ─── */
@@ -276,13 +276,13 @@
 
 .table tbody td {
   padding: 9px 10px;
-  border-bottom: 1px solid rgba(48, 54, 61, 0.7);
+  border-bottom: 1px solid rgba(30, 45, 82, 0.7);
 }
 
 .row { cursor: pointer; }
 .row:hover td { background: var(--surface); }
-.selectedRow td { background: rgba(249, 115, 22, 0.08); }
-.selectedRow:hover td { background: rgba(249, 115, 22, 0.12); }
+.selectedRow td { background: rgba(59, 130, 246, 0.08); }
+.selectedRow:hover td { background: rgba(59, 130, 246, 0.12); }
 .selectedRow { cursor: pointer; }
 
 .num   { font-variant-numeric: tabular-nums; text-align: right; }
@@ -478,8 +478,8 @@
   gap: 5px;
   padding: 10px 14px;
   border-radius: 8px;
-  background: rgba(45, 212, 191, 0.07);
-  border: 1px solid rgba(45, 212, 191, 0.25);
+  background: rgba(129, 140, 248, 0.07);
+  border: 1px solid rgba(129, 140, 248, 0.25);
   min-width: 0;
 }
 .badgeNameRow {
@@ -492,7 +492,7 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: #2dd4bf;
+  color: #818cf8;
 }
 .badgeStat {
   font-size: 13px;
@@ -527,7 +527,7 @@
   bottom: calc(100% + 8px);
   left: 50%;
   transform: translateX(-50%);
-  background: #1c2128;
+  background: #0d1228;
   border: 1px solid var(--border);
   border-radius: 8px;
   padding: 10px 12px;

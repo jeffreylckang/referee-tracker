@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react'
+import { useEffect, useRef, useState, useMemo } from 'react'
 import { fetchReferees, fetchPlayers, fetchTeams, fetchFilters, fetchReferee, fetchPlayer, fetchTeam, fetchSummary } from '../api'
 import styles from './DashboardView.module.css'
 
@@ -62,19 +62,37 @@ export default function DashboardView() {
   const query = search.toLowerCase()
   const filterOpts = { season: season || undefined, game_type: gameType || undefined, foul_detail: foulDetail || undefined }
 
-  async function selectReferee(r) {
-    const data = await fetchReferee(r.official_id, filterOpts)
-    setDetail({ type: 'referee', data })
+  // Tracks the most-recently-clicked entity so stale responses don't overwrite newer ones
+  const pendingRef = useRef(null)
+
+  function selectReferee(r) {
+    const id = r.official_id
+    const key = `referee:${id}`
+    pendingRef.current = key
+    fetchReferee(id, { ...filterOpts, include_badges: false })
+      .then(data => { if (pendingRef.current === key) setDetail({ type: 'referee', data, _id: id }) })
+    fetchReferee(id, filterOpts)
+      .then(data => { if (pendingRef.current === key) setDetail({ type: 'referee', data, _id: id }) })
   }
 
-  async function selectPlayer(p) {
-    const data = await fetchPlayer(p.player_id, filterOpts)
-    setDetail({ type: 'player', data })
+  function selectPlayer(p) {
+    const id = p.player_id
+    const key = `player:${id}`
+    pendingRef.current = key
+    fetchPlayer(id, { ...filterOpts, include_badges: false })
+      .then(data => { if (pendingRef.current === key) setDetail({ type: 'player', data, _id: id }) })
+    fetchPlayer(id, filterOpts)
+      .then(data => { if (pendingRef.current === key) setDetail({ type: 'player', data, _id: id }) })
   }
 
-  async function selectTeam(t) {
-    const data = await fetchTeam(t.team_tricode, filterOpts)
-    setDetail({ type: 'team', data })
+  function selectTeam(t) {
+    const id = t.team_tricode
+    const key = `team:${id}`
+    pendingRef.current = key
+    fetchTeam(id, { ...filterOpts, include_badges: false })
+      .then(data => { if (pendingRef.current === key) setDetail({ type: 'team', data, _id: id }) })
+    fetchTeam(id, filterOpts)
+      .then(data => { if (pendingRef.current === key) setDetail({ type: 'team', data, _id: id }) })
   }
 
   const filteredReferees = referees.filter(r => r.official_name.toLowerCase().includes(query))

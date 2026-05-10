@@ -48,7 +48,7 @@ export default function GraphView() {
     hlLinks.current.clear()
     setPanel(null)
     setLoading(true)
-    const minFouls = selectedReferee ? 1 : 3
+    const minFouls = selectedReferee ? 10 : 3
     const data = await fetchGraph({ season, foul_detail: foulType, game_type: gameType, team, official_id: selectedReferee, min_fouls: minFouls })
     setLoading(false)
     dataRef.current = data
@@ -58,7 +58,7 @@ export default function GraphView() {
 
     if (!graphRef.current) {
       graphRef.current = ForceGraph()(el)
-        .backgroundColor('#0d1117')
+        .backgroundColor('#07091a')
         .nodeLabel(n => `${n.name} (${n.foul_count} fouls)`)
         .nodeCanvasObject((node, ctx, globalScale) => {
           const r = 5
@@ -73,20 +73,20 @@ export default function GraphView() {
             ctx.lineTo(node.x,           node.y + r * 1.4)
             ctx.lineTo(node.x - r * 1.4, node.y)
             ctx.closePath()
-            ctx.fillStyle = '#f97316'
+            ctx.fillStyle = '#f59e0b'
             ctx.fill()
             if (isHl && hlNodes.current.size > 0) {
-              ctx.strokeStyle = 'rgba(251,146,60,0.6)'
+              ctx.strokeStyle = 'rgba(245,158,11,0.6)'
               ctx.lineWidth = 1
               ctx.stroke()
             }
           } else {
             ctx.beginPath()
             ctx.arc(node.x, node.y, r, 0, 2 * Math.PI)
-            ctx.fillStyle = '#38bdf8'
+            ctx.fillStyle = '#93c5fd'
             ctx.fill()
             if (isHl && hlNodes.current.size > 0) {
-              ctx.strokeStyle = 'rgba(56,189,248,0.5)'
+              ctx.strokeStyle = 'rgba(147,197,253,0.5)'
               ctx.lineWidth = 1
               ctx.stroke()
             }
@@ -97,7 +97,7 @@ export default function GraphView() {
           if (showLabel) {
             const fontSize = Math.min(4, 14 / globalScale)
             ctx.font = `500 ${fontSize}px -apple-system, sans-serif`
-            ctx.fillStyle = '#e6edf3'
+            ctx.fillStyle = '#dce8fa'
             ctx.textAlign = 'center'
             ctx.textBaseline = 'top'
             ctx.globalAlpha = 1
@@ -123,40 +123,63 @@ export default function GraphView() {
         })
         .linkCanvasObjectMode(() => 'replace')
         .linkCanvasObject((link, ctx) => {
-          const isHl = hlLinks.current.size === 0 || hlLinks.current.has(link)
           const src = link.source
           const tgt = link.target
           if (!src.x || !tgt.x) return
+
+          const hlActive = hlLinks.current.size > 0
+          const isHl = !hlActive || hlLinks.current.has(link)
+
           ctx.beginPath()
           ctx.moveTo(src.x, src.y)
           ctx.lineTo(tgt.x, tgt.y)
-          ctx.strokeStyle = isHl ? 'rgba(255,255,255,0.55)' : 'rgba(255,255,255,0.05)'
-          ctx.lineWidth = isHl && hlLinks.current.size > 0 ? 1 : 0.5
+
+          if (!isHl) {
+            ctx.strokeStyle = 'rgba(255,255,255,0.04)'
+            ctx.lineWidth = 0.3
+            ctx.stroke()
+            return
+          }
+
+          const maxCount = hlActive
+            ? Math.max(...[...hlLinks.current].map(l => l.count || 1))
+            : (link.count || 1)
+          const t = Math.min((link.count || 1) / maxCount, 1)
+          const alpha = hlActive ? 0.2 + t * 0.65 : 0.15
+          const lineWidth = hlActive ? 0.5 + t * 3.5 : 0.4
+
+          ctx.strokeStyle = `rgba(255,255,255,${alpha})`
+          ctx.lineWidth = lineWidth
           ctx.stroke()
+
+          if (hlActive && link.count > 1) {
+            const mx = (src.x + tgt.x) / 2
+            const my = (src.y + tgt.y) / 2
+            ctx.font = '500 3px sans-serif'
+            ctx.fillStyle = `rgba(255,255,255,${alpha})`
+            ctx.textAlign = 'center'
+            ctx.textBaseline = 'middle'
+            ctx.fillText(String(link.count), mx, my)
+          }
         })
-        // Don't stop cooldown here — just zoom. Stopping cooldown breaks subsequent loads.
         .onEngineStop(() => {
-          if (graphRef.current) graphRef.current.zoom(3, 1000)
+          if (graphRef.current) graphRef.current.zoomToFit(800, 30)
         })
         .cooldownTicks(180)
         .d3AlphaDecay(0.02)
         .d3VelocityDecay(0.35)
 
       graphRef.current.width(el.clientWidth).height(el.clientHeight)
-      graphRef.current.d3Force('charge').strength(n => n.type === 'referee' ? -350 : -40)
-      graphRef.current.d3Force('link').distance(link => 15 + 50 / Math.sqrt(link.count || 1)).strength(0.6)
     }
 
     // Re-register click handler every load so it closes over current season/gameType
-    graphRef.current.onNodeClick(async node => {
+    graphRef.current.onNodeClick(node => {
       if (selectedNodeRef.current === node) {
         selectedNodeRef.current = null
         hlNodes.current.clear()
         hlLinks.current.clear()
         setPanel(null)
-        // Reheat briefly to force a repaint, then cool immediately
-        graphRef.current.d3ReheatSimulation()
-        setTimeout(() => graphRef.current?.cooldownTicks(0), 100)
+        graphRef.current.refresh()
         return
       }
       selectedNodeRef.current = node
@@ -172,22 +195,63 @@ export default function GraphView() {
           hlNodes.current.add(t)
         }
       })
-      // Reheat briefly to force a repaint, then cool immediately
-      graphRef.current.d3ReheatSimulation()
-      setTimeout(() => graphRef.current?.cooldownTicks(0), 100)
-      // Load detail panel in the background
+      graphRef.current.refresh()
+
+      // Show loading state immediately, then fill in progressively
+      const clickedNode = node
       const id = node.id.slice(2)
+      setPanel({ type: node.type, data: null })
+      const opts = { season: season || undefined, game_type: gameType || undefined }
       if (node.type === 'referee') {
-        const data = await fetchReferee(id, { season: season || undefined, game_type: gameType || undefined })
-        setPanel({ type: 'referee', data })
+        fetchReferee(id, { ...opts, include_badges: false })
+          .then(data => { if (selectedNodeRef.current === clickedNode) setPanel({ type: 'referee', data }) })
+        fetchReferee(id, opts)
+          .then(data => { if (selectedNodeRef.current === clickedNode) setPanel({ type: 'referee', data }) })
       } else {
-        const data = await fetchPlayer(id, { season: season || undefined, game_type: gameType || undefined })
-        setPanel({ type: 'player', data })
+        fetchPlayer(id, { ...opts, include_badges: false })
+          .then(data => { if (selectedNodeRef.current === clickedNode) setPanel({ type: 'player', data }) })
+        fetchPlayer(id, opts)
+          .then(data => { if (selectedNodeRef.current === clickedNode) setPanel({ type: 'player', data }) })
       }
     })
 
-    // Reset cooldown ticks before each new data load so physics runs properly
-    graphRef.current.cooldownTicks(180)
+    // Compute fixed radial positions — single referee at center, players by foul count
+    const W = el.clientWidth || 800
+    const H = el.clientHeight || 600
+    const refNodes    = data.nodes.filter(n => n.type === 'referee')
+    const playerNodes = data.nodes.filter(n => n.type === 'player')
+      .sort((a, b) => b.foul_count - a.foul_count)
+
+    if (refNodes.length === 1) {
+      // Referee fixed at graph origin (0,0); force-graph centers view on mean node position
+      refNodes[0].fx = 0; refNodes[0].fy = 0
+      refNodes[0].x  = 0; refNodes[0].y  = 0
+
+      const maxCount   = playerNodes[0]?.foul_count || 1
+      const minCount   = playerNodes[playerNodes.length - 1]?.foul_count || 1
+      const countRange = Math.max(maxCount - minCount, 1)
+      const minR = 25                          // closest player (most fouls) is nearly touching the ref
+      const maxR = Math.min(W, H) * 0.44      // furthest player at ~44% of half-canvas
+      playerNodes.forEach((n, i) => {
+        const angle  = (i / playerNodes.length) * 2 * Math.PI - Math.PI / 2
+        const t      = (maxCount - n.foul_count) / countRange  // 0 = most fouls (closest), 1 = fewest (furthest)
+        const radius = minR + t * (maxR - minR)
+        const px = radius * Math.cos(angle)
+        const py = radius * Math.sin(angle)
+        n.fx = px; n.fy = py
+        n.x  = px; n.y  = py
+      })
+
+      graphRef.current.d3Force('charge').strength(0)
+      graphRef.current.d3Force('link').strength(0)
+      graphRef.current.cooldownTicks(0)
+    } else {
+      // Multiple referees: light physics, moderate repulsion
+      graphRef.current.d3Force('charge').strength(n => n.type === 'referee' ? -200 : -25)
+      graphRef.current.d3Force('link').distance(link => 15 + 50 / Math.sqrt(link.count || 1)).strength(0.6)
+      graphRef.current.cooldownTicks(180)
+    }
+
     graphRef.current.graphData(data)
   }, [season, foulType, gameType, team, selectedReferee])
 
@@ -249,7 +313,10 @@ export default function GraphView() {
       {panel && (
         <div className={styles.panel}>
           <button className={styles.close} onClick={() => setPanel(null)}>✕</button>
-          {panel.type === 'referee' ? <RefereePanel data={panel.data} /> : <PlayerPanel data={panel.data} />}
+          {!panel.data
+            ? <p className={styles.loading} style={{ padding: '8px 0' }}>Loading…</p>
+            : panel.type === 'referee' ? <RefereePanel data={panel.data} /> : <PlayerPanel data={panel.data} />
+          }
         </div>
       )}
     </div>
