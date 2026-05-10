@@ -227,12 +227,21 @@ export default function GraphView() {
       refNodes[0].fx = 0; refNodes[0].fy = 0
       refNodes[0].x  = 0; refNodes[0].y  = 0
 
-      const minR = 40                          // rank 1 (most fouls) sits this far from the ref
-      const maxR = Math.min(W, H) * 0.44      // last rank sits at ~44% of half-canvas
+      const minR = 40
+      const maxR = Math.min(W, H) * 0.44
       const n_   = playerNodes.length
+
+      // Deterministic pseudo-random angle per player — organic look, consistent on reload
+      function hashAngle(id) {
+        let h = 0
+        const s = String(id)
+        for (let i = 0; i < s.length; i++) h = Math.imul(31, h) + s.charCodeAt(i) | 0
+        return (Math.abs(h) % 10000) / 10000 * 2 * Math.PI
+      }
+
       playerNodes.forEach((n, i) => {
-        const angle  = (i / n_) * 2 * Math.PI - Math.PI / 2
-        const t      = n_ > 1 ? i / (n_ - 1) : 0   // rank 0 → minR, rank last → maxR
+        const angle  = hashAngle(n.id)                // random direction, consistent per player
+        const t      = n_ > 1 ? i / (n_ - 1) : 0    // rank 0 (most fouls) → minR, last → maxR
         const radius = minR + t * (maxR - minR)
         const px = radius * Math.cos(angle)
         const py = radius * Math.sin(angle)
